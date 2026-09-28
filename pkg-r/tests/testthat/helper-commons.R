@@ -17,16 +17,17 @@ test_sales <- function() {
 }
 
 inline_image_dimensions <- function(image) {
-  info <- magick::image_info(magick::image_read(
-    jsonlite::base64_dec(image@data)
-  ))
-  unname(as.integer(info[1, c("width", "height")]))
+  png_dimensions(jsonlite::base64_dec(image@data))
 }
 
 html_png_dimensions <- function(html) {
   data <- sub('.*data:image/png;base64,([^"]+)".*', "\\1", html)
-  info <- magick::image_info(magick::image_read(jsonlite::base64_dec(data)))
-  unname(as.integer(info[1, c("width", "height")]))
+  png_dimensions(jsonlite::base64_dec(data))
+}
+
+# Bytes 17-24 of a PNG are the width and height from its IHDR chunk.
+png_dimensions <- function(data) {
+  readBin(data[17:24], "integer", n = 2L, size = 4L, endian = "big")
 }
 
 test_source <- function() {
