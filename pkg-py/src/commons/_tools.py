@@ -3,7 +3,7 @@
 Register only the tools the agent's composition earns: nothing about its
 surface should imply operations it does not have. `pkg-r/R/tools.R` decides
 the same thing for R, and `tests/shared/tool-registration.json` pins the
-conditions and the tool descriptions both packages must agree on.
+registration, descriptions, and responses both packages must agree on.
 
 `build_commons_tools()` returns tool objects rather than registering them on a
 chat client, so an agent's surface can be built and inspected before there is
@@ -52,6 +52,7 @@ from ._frames import describe_frame, is_frame
 from ._handles import HandleStore
 from ._measures import Measure
 from ._pool import call_metrics, search_pool_text
+from ._prompt import read_prompt
 from ._provenance import TAG_EXTRA_KEY, Tag
 from ._rows import frame_rows, render_value, rows_to_markdown
 from ._sample_summary import SAMPLE_SUMMARY_HEADING, sample_summary
@@ -160,6 +161,7 @@ def build_commons_tools(context: ToolContext) -> list[Tool]:
             _search_context(context),
             _describe_table(context),
             _run_sql(context),
+            _describe_trust_system(),
         ]
     )
     return tools
@@ -229,6 +231,24 @@ def tool_description(tool: Tool) -> str:
     back has one spelling rather than one per caller.
     """
     return str(tool.schema["function"]["description"])
+
+
+def _describe_trust_system() -> Tool:
+    def describe_trust_system() -> ContentToolResult:
+        return tool_result(
+            read_prompt("trust-system.md"),
+            title="Explained answer trust",
+        )
+
+    return _tool(
+        describe_trust_system,
+        "describe_trust_system",
+        "Answer questions about the trust system. Call this tool when the user "
+        "asks about green shields, blue quotation marks, yellow warning circles, "
+        "trusted code, trusted context, or how answer trust is determined.",
+        _parameters({}, []),
+        "Explaining answer trust",
+    )
 
 
 def _resolve_source(
