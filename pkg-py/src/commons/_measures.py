@@ -55,6 +55,10 @@ Injected = Annotated[_T, INJECTED]
 
 MEASURE_ATTRIBUTE: Final = "__commons_measure__"
 
+# Source text a generated measure function shows in place of its own, such as
+# the SAS code a SAS measure runs.
+SOURCE_TEXT_ATTRIBUTE: Final = "__commons_source_text__"
+
 
 @dataclass(frozen=True)
 class Measure:
@@ -453,8 +457,9 @@ def semantic_layer(*items: Any) -> SemanticLayer:
     """Collect measures into a semantic layer.
 
     Each item is a measure, a list (or tuple) of measures, a module, or a
-    path to a Python file or a directory of them. Directory searches are
-    not recursive.
+    path to a Python or SAS file or a directory of them. Directory searches
+    are not recursive. Measures read from a .sas path run on a default SAS
+    session; use :func:`sas_measures` to choose the session.
 
     A sibling file is imported by plain absolute import; its directory is
     on sys.path only while the file loads. Even a single requested file
@@ -532,8 +537,8 @@ def _from_path(path: Path) -> tuple[list[Measure], dict[str, str]]:
     if not path.exists():
         raise ValueError(
             f"Path does not exist: {path}.\n"
-            f"semantic_layer() takes measures, modules, Python files, or "
-            f"directories of them."
+            f"semantic_layer() takes measures, modules, Python or SAS files, "
+            f"or directories of them."
         )
 
     if path.is_dir():
@@ -544,12 +549,17 @@ def _from_path(path: Path) -> tuple[list[Measure], dict[str, str]]:
             for entry in path.iterdir()
             if entry.suffix == ".py" and entry.name != "__init__.py"
         )
+        sas_files = sorted(
+            entry for entry in path.iterdir() if entry.suffix.lower() == ".sas"
+        )
         # Once for the whole directory, before anything in it executes: the
         # check scans every entry anyway, so repeating it per file is O(n^2)
         # find_spec calls, and failing before the first load keeps a rejected
         # directory from partially executing.
         _check_directory_importable(path, requested=path)
         directory_checked = True
+    elif path.suffix.lower() == ".sas":
+        return _from_sas_files([path])
     else:
         # The suffix is checked here, not left for the loader to discover:
         # spec_from_file_location gives a .pyc or .so a real loader, so
@@ -561,6 +571,7 @@ def _from_path(path: Path) -> tuple[list[Measure], dict[str, str]]:
                 f"Pass a .py file, a directory of them, or a module object."
             )
         files = [path]
+        sas_files = []
         directory_checked = False
 
     measures: list[Measure] = []
@@ -569,6 +580,22 @@ def _from_path(path: Path) -> tuple[list[Measure], dict[str, str]]:
         found, text = _from_module(
             _load_module_from_path(file, directory_checked=directory_checked)
         )
+        measures.extend(found)
+        _merge_sources(sources, text)
+    found, text = _from_sas_files(sas_files)
+    measures.extend(found)
+    _merge_sources(sources, text)
+    return measures, sources
+
+
+def _from_sas_files(files: Sequence[Path]) -> tuple[list[Measure], dict[str, str]]:
+    """Read .sas files given by path; they run on the default SAS session."""
+    from ._sas import read_sas_measures
+
+    measures: list[Measure] = []
+    sources: dict[str, str] = {}
+    for file in files:
+        found, text = read_sas_measures(file)
         measures.extend(found)
         _merge_sources(sources, text)
     return measures, sources
@@ -838,6 +865,9 @@ def _check_directory_importable(directory: Path, requested: Path) -> None:
 
 
 def _source_text(func: Callable[..., Any]) -> str:
+    text = getattr(func, SOURCE_TEXT_ATTRIBUTE, None)
+    if isinstance(text, str):
+        return text
     try:
         return inspect.getsource(func)
     except (OSError, TypeError):

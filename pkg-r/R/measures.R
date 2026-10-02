@@ -4,9 +4,9 @@
 #' Data dictionary definitions and warehouse semantic models contribute through
 #' [data_source()].
 #'
-#' @param ... [measure()] objects, lists of measures, or paths to R scripts or
-#'   directories containing R scripts. Directory searches are not recursive.
-#'   File and inline measures can be freely mixed.
+#' @param ... [measure()] objects, lists of measures, [sas_measures()], or
+#'   paths to R or SAS scripts or directories containing them. Directory
+#'   searches are not recursive. File and inline measures can be freely mixed.
 #'
 #' @section Measures from files:
 #' Character paths can name R scripts or directories containing them. Functions
@@ -22,6 +22,10 @@
 #' Measure and helper source is visible in the agent's R session; evaluating a
 #' measure's name there prints its definition. Function environments,
 #' connections, and credentials are not shared with that session.
+#'
+#' `.sas` files hold SAS measures, declared in `/** ... */` header blocks with
+#' the same tags. They run on a default [sas_session()]; see [sas_measures()]
+#' for their syntax and to choose the session.
 #'
 #' @section Measure arguments:
 #' A measure function can take two kinds of arguments:

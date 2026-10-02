@@ -25,6 +25,8 @@ reference:
   - data_source
   - semantic_layer
   - measure
+  - sas_measures
+  - sas_session
   - context_layer
 - title: Shiny UI and server
   description: Put a commons agent inside of an interactive chat app.

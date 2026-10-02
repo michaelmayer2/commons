@@ -7,9 +7,9 @@
 semantic_layer(...)
 }
 \arguments{
-\item{...}{\code{\link[=measure]{measure()}} objects, lists of measures, or paths to R scripts or
-directories containing R scripts. Directory searches are not recursive.
-File and inline measures can be freely mixed.}
+\item{...}{\code{\link[=measure]{measure()}} objects, lists of measures, \code{\link[=sas_measures]{sas_measures()}}, or
+paths to R or SAS scripts or directories containing them. Directory
+searches are not recursive. File and inline measures can be freely mixed.}
 }
 \value{
 A \code{commons_semantic_layer} R6 object. Its internals are private and
@@ -35,6 +35,10 @@ default, falling back to \code{string}.
 Measure and helper source is visible in the agent's R session; evaluating a
 measure's name there prints its definition. Function environments,
 connections, and credentials are not shared with that session.
+
+\code{.sas} files hold SAS measures, declared in \verb{/** ... */} header blocks with
+the same tags. They run on a default \code{\link[=sas_session]{sas_session()}}; see \code{\link[=sas_measures]{sas_measures()}}
+for their syntax and to choose the session.
 }
 
 \section{Measure arguments}{

@@ -17,6 +17,8 @@ read_measures <- function(paths, env = globalenv()) {
   }
 
   files <- resolve_measure_files(paths)
+  sas_files <- files[is_sas_file(files)]
+  files <- files[!is_sas_file(files)]
 
   # Source every file into one shared env (in order) so a measure can call a
   # helper defined in a sibling file. The parsed block only reads tags. The env
@@ -34,12 +36,16 @@ read_measures <- function(paths, env = globalenv()) {
     recursive = FALSE
   )
   records <- records %||% list()
-  new_measure_files(
+  r_measures <- new_measure_files(
     measures = lapply(records, `[[`, "measure"),
     fn_sources = env_fn_sources(measure_env),
     provenance = lapply(records, `[[`, "provenance"),
     measure_display = lapply(records, `[[`, "measure_display")
   )
+  if (!length(sas_files)) {
+    return(r_measures)
+  }
+  combine_measure_files(r_measures, read_sas_measure_files(sas_files))
 }
 
 new_measure_files <- function(
@@ -93,7 +99,7 @@ resolve_measure_files <- function(paths, call = rlang::caller_env()) {
 
   files <- unlist(lapply(paths, function(path) {
     if (dir.exists(path)) {
-      list.files(path, pattern = "[.][Rr]$", full.names = TRUE)
+      list.files(path, pattern = "[.]([Rr]|[Ss][Aa][Ss])$", full.names = TRUE)
     } else {
       path
     }

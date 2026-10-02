@@ -1023,12 +1023,15 @@ def test_public_api_exposes_the_semantic_layer() -> None:
         "DataSource",
         "Injected",
         "Measure",
+        "SasSession",
         "SemanticLayer",
         "Tag",
         "context_layer",
         "data_source",
         "list_tables",
         "measure",
+        "sas_measures",
+        "sas_session",
         "semantic_layer",
     }
     assert commons.Injected is Injected

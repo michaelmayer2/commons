@@ -122,6 +122,31 @@ def biodiversity_by_site(
 
 The `biodiversity` parameter receives the connection of the data source named `biodiversity`. The model supplies `site`.
 
+#### SAS measure file
+
+Validated SAS code can be a trusted calculation too. A `.sas` file declares its measures in `/** ... */` header blocks with the same tags. Before the code runs, each argument is set as a macro variable, and the dataset named by `@output` (by default `WORK.RESULT`) comes back as a data frame. A log line starting with `ERROR` fails the measure. SAS measures read data from the SAS server's libraries, not from commons data sources. Refer to a string argument as `%superq(name)` so that SAS doesn't resolve macro triggers in its value.
+
+`measures/heights.sas`
+
+```sas
+/**
+ * Mean height for one sex
+ *
+ * @measure
+ * @param sex `enum[F, M]` Which sex.
+ * @param [min_age=11] `integer` Youngest age included.
+ * @return One row with the mean height.
+ * @output WORK.RESULT
+ */
+proc means data=sashelp.class noprint;
+  where sex = "&sex" and age >= &min_age;
+  var height;
+  output out=work.result mean=height;
+run;
+```
+
+SAS measures run through SASPy. Install it with `pip install commons[sas]` and configure a connection. To choose the SASPy configuration, use `commons.semantic_layer(commons.sas_measures("measures", session=commons.sas_session("oda")))`.
+
 #### Context document
 
 `context/biodiversity.md`
@@ -263,7 +288,7 @@ agent = commons.Commons(
 agent.chat("How many species were observed at Oak Bluff?")
 ```
 
-`data_sources` is one `DataSource` or a mapping of name to `DataSource`. Name the sources when a measure takes an injected connection, because commons injects by name. `semantic_layer()` accepts measures, modules, or paths to `.py` files and directories. `context_layer()` accepts a list of file paths.
+`data_sources` is one `DataSource` or a mapping of name to `DataSource`. Name the sources when a measure takes an injected connection, because commons injects by name. `semantic_layer()` accepts measures, modules, or paths to `.py` and `.sas` files and directories. `context_layer()` accepts a list of file paths.
 
 Underneath, a `Commons` agent inherits from a `chatlas.Chat` object, but builds its own system prompt and tools. As such, it follows the `Chat` API and provides the `chat()` and `stream_async()` methods as ways to ask a question. The other `chatlas` entry points, such as `chat_async()`, `stream()`, and `chat_structured()`, are not supported and will raise `NotImplementedError` at this moment.
 

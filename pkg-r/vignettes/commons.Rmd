@@ -167,6 +167,31 @@ biodiversity_by_site <- function(biodiversity, site) {
 }
 ```
 
+#### SAS measure file
+
+Validated SAS code can be a trusted calculation too. A `.sas` file declares its measures in `/** ... */` header blocks with the same tags. Before the code runs, each argument is set as a macro variable, and the dataset named by `@output` (by default `WORK.RESULT`) comes back as a data frame. A log line starting with `ERROR` fails the measure. SAS measures read data from the SAS server's libraries, not from commons data sources. Refer to a string argument as `%superq(name)` so that SAS doesn't resolve macro triggers in its value.
+
+`measures/heights.sas`
+
+```sas
+/**
+ * Mean height for one sex
+ *
+ * @measure
+ * @param sex `enum[F, M]` Which sex.
+ * @param [min_age=11] `integer` Youngest age included.
+ * @return One row with the mean height.
+ * @output WORK.RESULT
+ */
+proc means data=sashelp.class noprint;
+  where sex = "&sex" and age >= &min_age;
+  var height;
+  output out=work.result mean=height;
+run;
+```
+
+SAS measures run through [sasquatch](https://docs.ropensci.org/sasquatch/) and SASPy, which must be installed and configured. To choose the SASPy configuration, use `sas_measures("measures", session = sas_session("oda"))` in `semantic_layer()`. See `?sas_measures` for the full header syntax.
+
 #### Context document
 
 `context/biodiversity.md`

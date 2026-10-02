@@ -1,0 +1,164 @@
+{
+  "description": "Trusted SAS code: how a .sas file becomes measures, how a call's arguments become the SAS that precedes the measure's code, and how a SAS log is read for failure. A measure block is a comment opening with `/**` at the start of a line and closing at the first `*/`, holding an `@measure` tag. Inside it, each line loses its leading whitespace and one leading `*`, and is then trimmed. Prose before the first tag is split into paragraphs at blank lines, each paragraph's lines joined by a single space: the first is the title, the rest the description. A tag's text runs on over following lines (joined by a space) until a blank line or the next tag. Tags: `@measure [name]` (the name defaults to the file stem), `@param name|[name]|[name=default] [`type`] text` (brackets mark an optional argument; the type code span is one of `string`, `integer`, `number`, `boolean`, `enum[a, b]`, or any of those followed by `[]` for an array, and defaults to string; array arguments take no default), `@return text`, `@output LIBREF.TABLE|TABLE|none` (default WORK.RESULT; a bare table is in WORK; `none` returns the listing), and repeatable `@provenance url`. The description the model reads is the title, the description, and `Returns: ` plus the return text, joined by blank lines. A measure's code runs from its block's `*/` to the next measure block or the end of the file; text before the first measure block is shared preamble, prepended to every measure's code with a blank line between. Code is trimmed of leading and trailing blank lines, and CRLF is read as LF. Errors are pinned as slugs, because the wording belongs to each language.",
+  "parse": {
+    "cases": [
+      {
+        "name": "a minimal measure takes its name from the file stem",
+        "stem": "class_count",
+        "text": "/**\n * Number of students\n *\n * @measure\n * @output none\n */\nproc sql; select count(*) from sashelp.class; quit;\n",
+        "expected": [
+          {
+            "name": "class_count",
+            "title": "Number of students",
+            "description": "Number of students",
+            "arguments": [],
+            "output": null,
+            "provenance": [],
+            "code": "proc sql; select count(*) from sashelp.class; quit;"
+          }
+        ]
+      },
+      {
+        "name": "typed, optional, and defaulted arguments",
+        "stem": "revenue",
+        "text": "/** Regional revenue\n *\n * Revenue summed over a region's orders,\n * net of returns.\n *\n * @measure region_revenue\n * @param region `enum[EMEA, AMER]` The sales region.\n * @param [year=2025] `integer` Fiscal year.\n * @param [cap] `number` Upper bound\n *   on order value.\n * @param [net=true] `boolean` Net of returns.\n * @param [label=All orders] Report label.\n * @return One row with the total.\n * @output WORK.REVENUE\n * @provenance https://example.com/revenue.sas\n */\nproc sql;\n  create table work.revenue as select sum(amount) as total from sales where region = \"&region\";\nquit;\n",
+        "expected": [
+          {
+            "name": "region_revenue",
+            "title": "Regional revenue",
+            "description": "Regional revenue\n\nRevenue summed over a region's orders, net of returns.\n\nReturns: One row with the total.",
+            "arguments": [
+              {"name": "region", "type": "enum", "values": ["EMEA", "AMER"], "required": true, "description": "The sales region."},
+              {"name": "year", "type": "integer", "required": false, "default": 2025, "description": "Fiscal year."},
+              {"name": "cap", "type": "number", "required": false, "description": "Upper bound on order value."},
+              {"name": "net", "type": "boolean", "required": false, "default": true, "description": "Net of returns."},
+              {"name": "label", "type": "string", "required": false, "default": "All orders", "description": "Report label."}
+            ],
+            "output": {"libref": "WORK", "table": "REVENUE"},
+            "provenance": ["https://example.com/revenue.sas"],
+            "code": "proc sql;\n  create table work.revenue as select sum(amount) as total from sales where region = \"&region\";\nquit;"
+          }
+        ]
+      },
+      {
+        "name": "array arguments and the default output table",
+        "stem": "heights",
+        "text": "/**\n * Mean height by sex\n * @measure\n * @param sexes `enum[F, M][]` Sexes to include.\n * @param ages `integer[]` Ages to include.\n */\nproc means data=sashelp.class(where=(sex in (&sexes) and age in (&ages))) noprint;\n  class sex; var height; output out=work.result mean=;\nrun;\n",
+        "expected": [
+          {
+            "name": "heights",
+            "title": "Mean height by sex",
+            "description": "Mean height by sex",
+            "arguments": [
+              {"name": "sexes", "type": "array", "items": {"type": "enum", "values": ["F", "M"]}, "required": true, "description": "Sexes to include."},
+              {"name": "ages", "type": "array", "items": {"type": "integer"}, "required": true, "description": "Ages to include."}
+            ],
+            "output": {"libref": "WORK", "table": "RESULT"},
+            "provenance": [],
+            "code": "proc means data=sashelp.class(where=(sex in (&sexes) and age in (&ages))) noprint;\n  class sex; var height; output out=work.result mean=;\nrun;"
+          }
+        ]
+      },
+      {
+        "name": "several measures in one file share its preamble; a bare output table is in WORK",
+        "stem": "students",
+        "text": "%macro tally(ds);\n  proc freq data=&ds; run;\n%mend;\n\n/**\n * Students by sex\n * @measure by_sex\n * @output by_sex\n */\nproc freq data=sashelp.class noprint; tables sex / out=work.by_sex; run;\n\n/**\n * Students by age\n * @measure by_age\n * @output work.by_age\n */\r\nproc freq data=sashelp.class noprint; tables age / out=work.by_age; run;\r\n",
+        "expected": [
+          {
+            "name": "by_sex",
+            "title": "Students by sex",
+            "description": "Students by sex",
+            "arguments": [],
+            "output": {"libref": "WORK", "table": "BY_SEX"},
+            "provenance": [],
+            "code": "%macro tally(ds);\n  proc freq data=&ds; run;\n%mend;\n\nproc freq data=sashelp.class noprint; tables sex / out=work.by_sex; run;"
+          },
+          {
+            "name": "by_age",
+            "title": "Students by age",
+            "description": "Students by age",
+            "arguments": [],
+            "output": {"libref": "WORK", "table": "BY_AGE"},
+            "provenance": [],
+            "code": "%macro tally(ds);\n  proc freq data=&ds; run;\n%mend;\n\nproc freq data=sashelp.class noprint; tables age / out=work.by_age; run;"
+          }
+        ]
+      },
+      {
+        "name": "a file without a measure block yields no measures",
+        "stem": "helpers",
+        "text": "/** Shared formats */\nproc format; value yn 1='Yes' 0='No'; run;\n",
+        "expected": []
+      }
+    ],
+    "errors": [
+      {"name": "a measure needs a title", "stem": "x", "text": "/**\n * @measure\n */\nrun;\n", "error": "no-description"},
+      {"name": "an unknown tag is a typo, not a comment", "stem": "x", "text": "/**\n * Title\n * @measure\n * @parm region The region.\n */\nrun;\n", "error": "unknown-tag"},
+      {"name": "argument names must be SAS macro variable names", "stem": "x", "text": "/**\n * Title\n * @measure\n * @param 1region The region.\n */\nrun;\n", "error": "invalid-param"},
+      {"name": "argument names are unique", "stem": "x", "text": "/**\n * Title\n * @measure\n * @param region A.\n * @param region B.\n */\nrun;\n", "error": "duplicate-param"},
+      {"name": "a default must fit the declared type", "stem": "x", "text": "/**\n * Title\n * @measure\n * @param [year=soon] `integer` Year.\n */\nrun;\n", "error": "invalid-default"},
+      {"name": "an enum default must be one of its values", "stem": "x", "text": "/**\n * Title\n * @measure\n * @param [region=APAC] `enum[EMEA, AMER]` Region.\n */\nrun;\n", "error": "invalid-default"},
+      {"name": "array arguments take no default", "stem": "x", "text": "/**\n * Title\n * @measure\n * @param [ages=12] `integer[]` Ages.\n */\nrun;\n", "error": "invalid-default"},
+      {"name": "an unknown type code is an error", "stem": "x", "text": "/**\n * Title\n * @measure\n * @param when `date` Day.\n */\nrun;\n", "error": "invalid-param"},
+      {"name": "the output must name a SAS dataset", "stem": "x", "text": "/**\n * Title\n * @measure\n * @output work.my-table\n */\nrun;\n", "error": "invalid-output"},
+      {"name": "a measure name must be an identifier", "stem": "my-measure", "text": "/**\n * Title\n * @measure\n */\nrun;\n", "error": "invalid-name"},
+      {"name": "measure names in one file are unique", "stem": "x", "text": "/**\n * A\n * @measure\n */\nrun;\n/**\n * B\n * @measure\n */\nrun;\n", "error": "duplicate-name"}
+    ]
+  },
+  "schema": {
+    "description": "A parsed SAS measure renders through the same measure_schema_text as any other, so a .sas file and an equivalent R or Python measure read identically to the model.",
+    "cases": [
+      {
+        "name": "a SAS measure's schema block",
+        "stem": "revenue",
+        "text": "/** Regional revenue\n * @measure\n * @param region `enum[EMEA, AMER]` The sales region.\n * @param [year=2025] `integer` Fiscal year.\n * @param [products] `string[]` Product codes.\n * @return One row.\n */\nrun;\n",
+        "expected": "### revenue\nRegional revenue\n\nReturns: One row.\n\narguments:\n  - region (one of {EMEA, AMER}, required) The sales region.\n  - year (integer, optional) Fiscal year.\n  - products (array of {string}, optional) Product codes."
+      }
+    ]
+  },
+  "prelude": {
+    "description": "The SAS submitted ahead of a measure's code for one call. `values` holds every declared argument after defaults are applied; null is an optional argument left unset. Every declared argument is assigned on every call, so a value from an earlier call in the same SAS session cannot leak into this one. Values are assigned with CALL SYMPUTX from single-quoted literals (quotes doubled), so nothing in a value is resolved as a macro at assignment: strings and enums are the value itself, integers are decimal, numbers are printf %.15g, booleans are 1 or 0, null is empty, and an array is its elements as SAS literals separated by a space (strings single-quoted, ready for `in (&name)`). A measure with an output table first deletes it, so a stale table from an earlier call cannot be returned.",
+    "cases": [
+      {
+        "name": "no arguments and no output",
+        "arguments": [],
+        "output": null,
+        "values": {},
+        "expected": ""
+      },
+      {
+        "name": "scalars, quoting, and the output reset",
+        "arguments": [
+          {"name": "region", "type": "enum", "values": ["EMEA", "AMER"], "required": true},
+          {"name": "who", "type": "string", "required": true},
+          {"name": "year", "type": "integer", "required": false},
+          {"name": "rate", "type": "number", "required": false},
+          {"name": "net", "type": "boolean", "required": false},
+          {"name": "cap", "type": "number", "required": false}
+        ],
+        "output": {"libref": "WORK", "table": "RESULT"},
+        "values": {"region": "EMEA", "who": "O'Brien & %sysexec(rm)", "year": 2025, "rate": 0.1, "net": false, "cap": null},
+        "expected": "data _null_;\n  call symputx('region', 'EMEA', 'G');\n  call symputx('who', 'O''Brien & %sysexec(rm)', 'G');\n  call symputx('year', '2025', 'G');\n  call symputx('rate', '0.1', 'G');\n  call symputx('net', '0', 'G');\n  call symputx('cap', '', 'G');\nrun;\nproc datasets lib=WORK nolist nowarn;\n  delete RESULT;\nquit;\n"
+      },
+      {
+        "name": "arrays become space-separated SAS literals",
+        "arguments": [
+          {"name": "sexes", "type": "array", "items": {"type": "enum", "values": ["F", "M"]}, "required": true},
+          {"name": "names", "type": "array", "items": {"type": "string"}, "required": true},
+          {"name": "weights", "type": "array", "items": {"type": "number"}, "required": true}
+        ],
+        "output": null,
+        "values": {"sexes": ["F", "M"], "names": ["Al", "D'Arcy"], "weights": [1, 2.5, 1e-20]},
+        "expected": "data _null_;\n  call symputx('sexes', '''F'' ''M''', 'G');\n  call symputx('names', '''Al'' ''D''''Arcy''', 'G');\n  call symputx('weights', '1 2.5 1e-20', 'G');\nrun;\n"
+      }
+    ]
+  },
+  "log_errors": {
+    "description": "A SAS run fails when its log has a line starting `ERROR` followed by an optional message number and a colon. Those lines, trimmed of trailing whitespace, are what a failure reports. A warning, or ERROR in the middle of a line, is not a failure.",
+    "cases": [
+      {"name": "a clean log", "log": "NOTE: The data set WORK.RESULT has 19 observations.\nWARNING: Apparent symbolic reference X not resolved.\n", "expected": []},
+      {"name": "errors with and without a message number", "log": "1    proc sql; selec x;\nERROR 180-322: Statement is not valid or it is used out of proper order.  \nNOTE: PROC SQL set option NOEXEC.\nERROR: File WORK.NOPE.DATA does not exist.\n", "expected": ["ERROR 180-322: Statement is not valid or it is used out of proper order.", "ERROR: File WORK.NOPE.DATA does not exist."]},
+      {"name": "ERROR mid-line is source echo, not a failure", "log": "2    put 'ERROR: not really';\nNOTE: DATA statement used.\n", "expected": []}
+    ]
+  }
+}
