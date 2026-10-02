@@ -25,10 +25,10 @@ reference:
   sections:
     - title: Main functions
       desc: The main agent constructor, plus the building blocks for a commons agent.
-      contents: [Commons, data_source, semantic_layer, measure, context_layer]
+      contents: [Commons, data_source, semantic_layer, measure, sas_measures, sas_session, slc_session, context_layer]
     - title: Supporting types
       desc: The objects the constructors return, and the values they carry.
-      contents: [DataSource, SemanticLayer, ContextLayer, Measure, Injected, Tag, list_tables]
+      contents: [DataSource, SemanticLayer, ContextLayer, Measure, SasSession, SlcSession, Injected, Tag, list_tables]
     - title: Shiny UI and server
       desc: "Put a commons agent inside of an interactive chat app. Needs the `shiny` extra."
       contents: [ui.app, ui.server, ui.theme, ui.commons_chat_dependency, ui.asset_base_url]
