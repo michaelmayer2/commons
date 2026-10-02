@@ -52,7 +52,7 @@ best-effort R guardrails with
 \code{options(commons.allow_unsafe_fallback = TRUE)}. These guardrails
 are not a security boundary.}
 
-\item{sas}{An optional \code{\link[=sas_session]{sas_session()}}. When given, the agent can also
+\item{sas}{An optional \code{\link[=sas_session]{sas_session()}} or \code{\link[=slc_session]{slc_session()}}. When given, the agent can also
 write and run its own SAS code with a \code{run_sas} tool, whose answers are
 ad hoc analysis like \code{run_r}'s. The code runs in a separate SAS session
 opened with the same configuration, never the one trusted SAS measures

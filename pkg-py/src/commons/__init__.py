@@ -13,7 +13,7 @@ from ._context_layer import ContextLayer, context_layer
 from ._data_source import DataSource, data_source, list_tables
 from ._measures import Injected, Measure, SemanticLayer, measure, semantic_layer
 from ._provenance import Tag
-from ._sas import SasSession, sas_measures, sas_session
+from ._sas import SasSession, SlcSession, sas_measures, sas_session, slc_session
 
 __all__: list[str] = [
     "Commons",
@@ -23,6 +23,7 @@ __all__: list[str] = [
     "Measure",
     "SasSession",
     "SemanticLayer",
+    "SlcSession",
     "Tag",
     "context_layer",
     "data_source",
@@ -31,6 +32,7 @@ __all__: list[str] = [
     "sas_measures",
     "sas_session",
     "semantic_layer",
+    "slc_session",
 ]
 
 

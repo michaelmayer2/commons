@@ -67,7 +67,7 @@ saspy_backend <- function(cfgname) {
 separate_sas_session <- function(sas) {
   if (is.null(sas$separate)) {
     cli::cli_abort(c(
-      "{.arg sas} must be a session {.fn sas_session} describes.",
+      "{.arg sas} must be a session {.fn sas_session} or {.fn slc_session} describes.",
       i = "commons runs agent-written SAS in a session of its own, and cannot open a separate one from this session."
     ))
   }

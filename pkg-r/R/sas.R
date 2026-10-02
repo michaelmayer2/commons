@@ -16,7 +16,8 @@
 #'
 #' @return A `commons_sas_session` object to pass to [sas_measures()].
 #'
-#' @seealso [sas_measures()] to read measures from `.sas` files.
+#' @seealso [sas_measures()] to read measures from `.sas` files, and
+#'   [slc_session()] to run them on Altair SLC instead.
 #'
 #' @examples
 #' sas_session("oda")
@@ -30,7 +31,7 @@ sas_session <- function(cfgname = NULL) {
 # A session is the four operations a SAS measure needs, so another route to
 # SAS can stand in for sasquatch, and optionally a way to open a separate
 # session on the same configuration, for agent-written SAS.
-new_sas_session <- function(backend, cfgname = NULL) {
+new_sas_session <- function(backend, cfgname = NULL, engine = "SAS") {
   structure(
     list(
       submit = backend$submit,
@@ -38,7 +39,8 @@ new_sas_session <- function(backend, cfgname = NULL) {
       to_df = backend$to_df,
       from_df = backend$from_df,
       separate = backend$separate,
-      cfgname = cfgname
+      cfgname = cfgname,
+      engine = engine
     ),
     class = "commons_sas_session"
   )
@@ -46,6 +48,10 @@ new_sas_session <- function(backend, cfgname = NULL) {
 
 #' @export
 print.commons_sas_session <- function(x, ...) {
+  if (identical(x$engine, "SLC")) {
+    cli::cli_text("An Altair SLC session, started on first use.")
+    return(invisible(x))
+  }
   config <- if (is.null(x$cfgname)) "the default configuration" else x$cfgname
   cli::cli_text("A SAS session using {config}, opened on first use.")
   invisible(x)
@@ -90,6 +96,80 @@ sasquatch_backend <- function(cfgname) {
     },
     separate = function() {
       new_sas_session(saspy_backend(cfgname), cfgname = cfgname)
+    }
+  )
+}
+
+#' Run SAS code on Altair SLC
+#'
+#' `slc_session()` describes an [Altair SLC](https://altair.com/altair-slc)
+#' process for SAS measures and agent-written SAS. SLC runs SAS-language code
+#' in a local process rather than on a SAS server. It does not start until it
+#' is first used, through [slcR](https://github.com/sol-eng/slcR). Pass it
+#' wherever a [sas_session()] is accepted: to [sas_measures()], or as the `sas`
+#' argument of [commons()].
+#'
+#' slcR looks for SLC in `$WPSHOME`, then in the default installation paths.
+#'
+#' @param sys_options A named list of SLC system options to start SLC with.
+#'
+#' @return A `commons_sas_session` object.
+#'
+#' @seealso [sas_measures()] to read measures from `.sas` files.
+#'
+#' @examples
+#' slc_session()
+#'
+#' @export
+slc_session <- function(sys_options = list()) {
+  if (!is.list(sys_options) || (length(sys_options) && !rlang::is_named(sys_options))) {
+    cli::cli_abort("{.arg sys_options} must be a named list.")
+  }
+  new_sas_session(slcr_backend(sys_options), engine = "SLC")
+}
+
+slcr_start <- function(sys_options) {
+  rlang::check_installed("slcR", reason = "to run SAS code on Altair SLC.")
+  slcR::Slc$new(sys_options)
+}
+
+slcr_backend <- function(sys_options, start = slcr_start) {
+  state <- new.env(parent = emptyenv())
+  state$log_lines <- 0L
+  connect <- function() {
+    if (is.null(state$slc)) {
+      state$slc <- start(sys_options)
+    }
+    state$slc
+  }
+
+  list(
+    submit = function(code) {
+      slc <- connect()
+      slc$clear_listing_output()
+      slc$submit(code)
+      # The SLC log accumulates, so each submission reads only what it added.
+      log <- strsplit(slc$get_log(), "\n", fixed = TRUE)[[1]]
+      added <- log[seq_along(log) > state$log_lines]
+      state$log_lines <- length(log)
+      list(
+        log = paste(added, collapse = "\n"),
+        listing = slc$get_listing_output()
+      )
+    },
+    table_exists = function(table, libref = "WORK") {
+      names <- connect()$get_library(libref)$get_dataset_names()
+      toupper(table) %in% toupper(names)
+    },
+    to_df = function(table, libref = "WORK") {
+      connect()$get_library(libref)$get_dataset_as_dataframe(table)
+    },
+    from_df = function(df, table, libref = "WORK") {
+      connect()$get_library(libref)$create_dataset_from_dataframe(df, table)
+      invisible(df)
+    },
+    separate = function() {
+      new_sas_session(slcr_backend(sys_options, start), engine = "SLC")
     }
   )
 }
@@ -166,8 +246,8 @@ default_sas_session <- function() {
 #'
 #' @param paths Paths to `.sas` files or directories containing them.
 #'   Directory searches are not recursive.
-#' @param session The [sas_session()] the measures run on. If `NULL`, a default
-#'   session using SASPy's default configuration.
+#' @param session The [sas_session()] or [slc_session()] the measures run
+#'   on. If `NULL`, a default session using SASPy's default configuration.
 #'
 #' @return Measures to pass to [semantic_layer()].
 #'

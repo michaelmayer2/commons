@@ -147,6 +147,8 @@ run;
 
 SAS measures run through SASPy. Install it with `pip install commons[sas]` and configure a connection. To choose the SASPy configuration, use `commons.semantic_layer(commons.sas_measures("measures", session=commons.sas_session("oda")))`.
 
+To run SAS measures on [Altair SLC](https://altair.com/altair-slc) instead of SAS, pass a `commons.slc_session()` as `session`. SLC runs through [slcPy](https://github.com/michaelmayer2/slcPy), which must be installed.
+
 #### Context document
 
 `context/biodiversity.md`
@@ -307,6 +309,8 @@ agent = commons.Commons(
 The agent then has a `run_sas` tool. Its answers are ad hoc analysis, like those from `run_sql`, so they are `Cited` or `Untrusted`. Data-frame results from other tools are uploaded to the agent's session as `WORK.R1`, `WORK.R2`, and so on. Agent code runs in a SAS session of its own, opened with the same configuration, so it cannot change the options, librefs, or macros that trusted SAS measures rely on.
 
 SAS code runs on the SAS server, beyond anything commons can sandbox, so secure the server itself. `run_sas` refuses to run unless the session reports `NOXCMD`, which turns off host commands. Also run the server in LOCKDOWN mode, under a low-privilege account that can read only the libraries the agent needs.
+
+`sas` can also be an `commons.slc_session()`, in which case the agent's code runs in a separate Altair SLC process. SLC runs on the same machine as the app and can read and write any file the app's account can, so start it with `NOXCMD` and run the app under an account with access to only what the agent needs.
 
 ### Chat UI
 

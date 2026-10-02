@@ -1,4 +1,4 @@
-"""Trusted SAS code: measures read from .sas files and run through SASPy.
+"""Trusted SAS code: measures read from .sas files and run through SASPy or SLC.
 
 A .sas file declares its measures in `/** ... */` header blocks tagged
 ``@measure``. Each becomes an ordinary :class:`Measure` whose function binds
@@ -142,6 +142,86 @@ class SasSession:
 def sas_session(cfgname: str | None = None, **saspy_options: Any) -> SasSession:
     """Describe a SAS connection for SAS measures; it opens on first use."""
     return SasSession(cfgname, **saspy_options)
+
+
+class SlcSession(SasSession):
+    """A connection to Altair SLC, started through slcPy on first use.
+
+    SLC runs SAS-language code in a local process rather than on a SAS
+    server. ``sys_options`` are SLC system options to start it with. It
+    answers the same calls as a :class:`SasSession`, so SAS measures and
+    agent-written SAS run on it unchanged.
+    """
+
+    def __init__(self, sys_options: Mapping[str, str] | None = None) -> None:
+        super().__init__()
+        self.sys_options = dict(sys_options or {})
+
+    def __repr__(self) -> str:
+        state = "started" if self._session is not None else "not started"
+        return f"<SlcSession ({state})>"
+
+    def independent_copy(self) -> SlcSession:
+        return SlcSession(self.sys_options)
+
+    def _connect(self) -> _SaspyLike:
+        if self._session is None:
+            try:
+                from slc.slc import Slc  # pyrefly: ignore[missing-import]
+                from wpslink.wps.server import (  # pyrefly: ignore[missing-import]
+                    NameValuePair,
+                )
+            except ImportError as error:
+                raise ImportError(
+                    "Running SAS code on Altair SLC requires slcPy.\n"
+                    "Install it with `pip install git+https://github.com/michaelmayer2/slcPy`, "
+                    "and set WPSHOME if SLC is not installed in /opt/altair/slc/2026."
+                ) from error
+            options = [NameValuePair(name, value) for name, value in self.sys_options.items()]
+            self._session = _SlcAdapter(Slc(options))
+        return self._session
+
+
+class _SlcAdapter:
+    """An slcPy session, answering the calls commons makes of SASPy."""
+
+    def __init__(self, slc: Any) -> None:
+        self._slc = slc
+
+    def submit(self, code: str, results: str = "TEXT") -> Mapping[str, str]:
+        self._slc.clearListingOutput()
+        self._slc.submit(code)
+        # slcPy flushes as it reads, so each submission sees only its own log.
+        return {
+            "LOG": _slc_lines(self._slc.getLog()),
+            "LST": _slc_lines(self._slc.getListingOutput()),
+        }
+
+    def exist(self, table: str, libref: str = "WORK") -> bool:
+        return bool(self._slc.get_library(libref).exist(table))
+
+    def sd2df(self, table: str, libref: str = "WORK") -> Any:
+        from slc.library import OpenMode  # pyrefly: ignore[missing-import]
+
+        dataset = self._slc.get_library(libref).open_dataset(
+            table, OpenMode.OpenModeRead
+        )
+        try:
+            return dataset.to_data_frame()
+        finally:
+            dataset.close()
+
+    def df2sd(self, df: Any, table: str = "_df", libref: str = "WORK") -> Any:
+        self._slc.get_library(libref).create_dataset_from_dataframe(table, df).close()
+
+
+def _slc_lines(lines: Any) -> str:
+    return "\n".join(str(line).rstrip("\n") for line in lines)
+
+
+def slc_session(sys_options: Mapping[str, str] | None = None) -> SlcSession:
+    """Describe an Altair SLC process for SAS measures; it starts on first use."""
+    return SlcSession(sys_options)
 
 
 _default_session: SasSession | None = None

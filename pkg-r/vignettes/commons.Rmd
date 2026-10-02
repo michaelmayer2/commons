@@ -192,6 +192,8 @@ run;
 
 SAS measures run through [sasquatch](https://docs.ropensci.org/sasquatch/) and SASPy, which must be installed and configured. To choose the SASPy configuration, use `sas_measures("measures", session = sas_session("oda"))` in `semantic_layer()`. See `?sas_measures` for the full header syntax.
 
+To run SAS measures on [Altair SLC](https://altair.com/altair-slc) instead of SAS, pass an `slc_session()`: `sas_measures("measures", session = slc_session())`. SLC runs through [slcR](https://github.com/sol-eng/slcR), which must be installed.
+
 #### Context document
 
 `context/biodiversity.md`
@@ -327,3 +329,5 @@ agent <- commons(
 The agent then has a `run_sas` tool. Its answers are ad hoc analysis, like those from `run_r`, so they are `Cited` or `Untrusted`. Data-frame results from other tools are uploaded to the agent's session as `WORK.R1`, `WORK.R2`, and so on. Agent code runs in a SAS session of its own, opened with the same configuration, so it cannot change the options, librefs, or macros that trusted SAS measures rely on.
 
 SAS code runs on the SAS server, outside the sandbox that contains `run_r`, so secure the server itself. `run_sas` refuses to run unless the session reports `NOXCMD`, which turns off host commands. Also run the server in LOCKDOWN mode, under a low-privilege account that can read only the libraries the agent needs.
+
+`sas` can also be an `slc_session()`, in which case the agent's code runs in a separate Altair SLC process. SLC runs on the same machine as the app and can read and write any file the app's account can, so start it with `NOXCMD` and run the app under an account with access to only what the agent needs.

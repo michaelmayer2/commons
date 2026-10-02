@@ -10,8 +10,8 @@ sas_measures(paths, session = NULL)
 \item{paths}{Paths to \code{.sas} files or directories containing them.
 Directory searches are not recursive.}
 
-\item{session}{The \code{\link[=sas_session]{sas_session()}} the measures run on. If \code{NULL}, a default
-session using SASPy's default configuration.}
+\item{session}{The \code{\link[=sas_session]{sas_session()}} or \code{\link[=slc_session]{slc_session()}} the measures run
+on. If \code{NULL}, a default session using SASPy's default configuration.}
 }
 \value{
 Measures to pass to \code{\link[=semantic_layer]{semantic_layer()}}.

@@ -1025,6 +1025,7 @@ def test_public_api_exposes_the_semantic_layer() -> None:
         "Measure",
         "SasSession",
         "SemanticLayer",
+        "SlcSession",
         "Tag",
         "context_layer",
         "data_source",
@@ -1033,6 +1034,7 @@ def test_public_api_exposes_the_semantic_layer() -> None:
         "sas_measures",
         "sas_session",
         "semantic_layer",
+        "slc_session",
     }
     assert commons.Injected is Injected
     assert commons.Measure is Measure

@@ -31,5 +31,6 @@ sas_session("oda")
 
 }
 \seealso{
-\code{\link[=sas_measures]{sas_measures()}} to read measures from \code{.sas} files.
+\code{\link[=sas_measures]{sas_measures()}} to read measures from \code{.sas} files, and
+\code{\link[=slc_session]{slc_session()}} to run them on Altair SLC instead.
 }

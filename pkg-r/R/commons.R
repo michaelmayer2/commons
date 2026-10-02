@@ -39,7 +39,7 @@
 #'   best-effort R guardrails with
 #'   `options(commons.allow_unsafe_fallback = TRUE)`. These guardrails
 #'   are not a security boundary.
-#' @param sas An optional [sas_session()]. When given, the agent can also
+#' @param sas An optional [sas_session()] or [slc_session()]. When given, the agent can also
 #'   write and run its own SAS code with a `run_sas` tool, whose answers are
 #'   ad hoc analysis like `run_r`'s. The code runs in a separate SAS session
 #'   opened with the same configuration, never the one trusted SAS measures
@@ -210,7 +210,7 @@ commons <- function(
   protection <- run_r_protection_mode()
   if (!is.null(sas) && !inherits(sas, "commons_sas_session")) {
     cli::cli_abort(
-      "{.arg sas} must be a {.fn sas_session} or {.code NULL}, not {.obj_type_friendly {sas}}."
+      "{.arg sas} must be a {.fn sas_session}, an {.fn slc_session}, or {.code NULL}, not {.obj_type_friendly {sas}}."
     )
   }
   check_instructions(instructions)
