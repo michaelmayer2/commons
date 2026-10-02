@@ -190,7 +190,7 @@ proc means data=sashelp.class noprint;
 run;
 ```
 
-SAS measures run through [sasquatch](https://docs.ropensci.org/sasquatch/) and SASPy, which must be installed and configured. To choose the SASPy configuration, use `sas_measures("measures", session = sas_session("oda"))` in `semantic_layer()`. See `?sas_measures` for the full header syntax.
+SAS measures run through [sasquatch](https://docs.ropensci.org/sasquatch/) and SASPy, which must be installed and configured. To choose the SASPy configuration, use `sas_measures("measures", session = sas_session("oda"))` in `semantic_layer()`. See `?sas_measures` for the full header syntax, and `vignette("sas")` for a walk-through.
 
 To run SAS measures on [Altair SLC](https://altair.com/altair-slc) instead of SAS, pass an `slc_session()`: `sas_measures("measures", session = slc_session())`. SLC runs through [slcR](https://github.com/sol-eng/slcR), which must be installed. For a walk-through, see `vignette("slc")`.
 

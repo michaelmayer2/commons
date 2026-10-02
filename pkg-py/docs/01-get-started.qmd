@@ -145,9 +145,9 @@ proc means data=sashelp.class noprint;
 run;
 ```
 
-SAS measures run through SASPy. Install it with `pip install commons[sas]` and configure a connection. To choose the SASPy configuration, use `commons.semantic_layer(commons.sas_measures("measures", session=commons.sas_session("oda")))`.
+SAS measures run through SASPy. Install it with `pip install commons[sas]` and configure a connection. To choose the SASPy configuration, use `commons.semantic_layer(commons.sas_measures("measures", session=commons.sas_session("oda")))`. For a walk-through, see the [SAS quickstart](04-sas-quickstart.qmd).
 
-To run SAS measures on [Altair SLC](https://altair.com/altair-slc) instead of SAS, pass a `commons.slc_session()` as `session`. SLC runs through [slcPy](https://github.com/michaelmayer2/slcPy), which must be installed. For a walk-through, see the [SLC quickstart](04-slc-quickstart.qmd).
+To run SAS measures on [Altair SLC](https://altair.com/altair-slc) instead of SAS, pass a `commons.slc_session()` as `session`. SLC runs through [slcPy](https://github.com/michaelmayer2/slcPy), which must be installed. For a walk-through, see the [SLC quickstart](05-slc-quickstart.qmd).
 
 #### Context document
 

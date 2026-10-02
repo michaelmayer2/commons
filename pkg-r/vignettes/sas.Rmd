@@ -1,0 +1,181 @@
+---
+title: "Quickstart: commons with SAS"
+output:
+  rmarkdown::html_vignette:
+    css:
+      - !expr system.file("rmarkdown", "templates", "html_vignette", "resources", "vignette.css", package = "rmarkdown")
+      - commons.css
+vignette: >
+  %\VignetteIndexEntry{Quickstart: commons with SAS}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+Many teams keep their validated logic in SAS. With commons, validated SAS programs become trusted calculations, so answers built on them are marked `Verified answer`. You can also let the agent write and run its own SAS code for follow-up analysis.
+
+This quickstart builds a small agent over clinical trial data in four steps:
+
+1. Install SAS support and check that you can reach SAS.
+2. Store the trial data in a SAS library.
+3. Write a trusted SAS measure.
+4. Build the agent and ask it questions.
+
+## 1. Install and check SAS
+
+You need access to a SAS server, such as SAS 9.4, SAS Viya, or [SAS OnDemand for Academics](https://www.sas.com/en_us/software/on-demand-for-academics.html). commons reaches it through [sasquatch](https://docs.ropensci.org/sasquatch/), which runs the Python package [SASPy](https://sassoftware.github.io/saspy/) through reticulate:
+
+```{r}
+pak::pak(c("posit-dev/commons/pkg-r", "sasquatch", "reticulate"))
+sasquatch::install_saspy()
+```
+
+Next, tell SASPy how to connect. `configure_saspy()` opens a `sascfg_personal.py` file to edit; the `"oda"` template fills in the settings for SAS OnDemand for Academics:
+
+```{r}
+sasquatch::configure_saspy(template = "oda")
+```
+
+Most connections to a SAS 9.4 server use IOM, which needs Java. See the [SASPy configuration guide](https://sassoftware.github.io/saspy/configuration.html) for the settings each kind of server needs. This guide uses a configuration named `oda`.
+
+Check that SAS runs code:
+
+```{r}
+sasquatch::sas_connect("oda")
+sas <- sasquatch::sas_get_session()
+cat(sas$submit("%put XCMD is %sysfunc(getoption(XCMD));")$LOG)
+sasquatch::sas_disconnect()
+```
+
+The log should include `XCMD is NOXCMD`. If it says `XCMD`, the server allows code to run host commands. Trusted measures still work, but commons won't let the agent run its own code until the server runs with `NOXCMD`. Your SAS administrator sets this. See [Security](#security).
+
+## 2. Store the data in a SAS library
+
+The example uses one table of trial visits: each subject's response score at baseline (week 0) and at week 12. Save it as `data/visits.csv`:
+
+```
+subject,arm,week,response
+101,Placebo,0,41
+101,Placebo,12,46
+102,Placebo,0,38
+102,Placebo,12,40
+103,Placebo,0,45
+103,Placebo,12,52
+104,Active,0,40
+104,Active,12,58
+105,Active,0,36
+105,Active,12,49
+106,Active,0,43
+106,Active,12,61
+```
+
+SAS measures read data from SAS libraries, not from R. Run this once to copy the table into a permanent library on the SAS server. This guide uses `/srv/trial`; use any directory on the server that your SAS account can write to:
+
+```{r}
+visits <- read.csv("data/visits.csv")
+
+sasquatch::sas_connect("oda")
+sas <- sasquatch::sas_get_session()
+sas$submit("options dlcreatedir; libname trial \"/srv/trial\";")
+sasquatch::sas_from_r(visits, "visits", libref = "trial")
+sasquatch::sas_disconnect()
+```
+
+## 3. Write a trusted measure
+
+A measure is a validated SAS program with a header that tells commons its name, what it computes, and which arguments the model may set. Save this as `measures/trial.sas`:
+
+```sas
+libname trial "/srv/trial" access=readonly;
+
+/**
+ * Mean response by treatment arm
+ *
+ * Averages the response score for each arm at one visit week.
+ *
+ * @measure arm_response
+ * @param [week=12] `integer` Visit week: 0 for baseline, 12 for the end of treatment.
+ * @return One row per arm, with the number of subjects and their mean response.
+ * @output WORK.RESULT
+ */
+proc means data=trial.visits noprint nway;
+  where week = &week;
+  class arm;
+  var response;
+  output out=work.result(drop=_type_ _freq_) n=subjects mean=mean_response;
+run;
+```
+
+How the file is read:
+
+- The `libname` line comes before the first header, so it runs before every measure in the file.
+- `week` reaches the program as the macro variable `&week`. commons checks that the model passed an integer before the code runs.
+- The dataset named by `@output` comes back to the agent as a data frame. If the log has an `ERROR` line, the measure fails, and the agent can't present the result as verified.
+
+A file can hold several measures, each with its own header. See `?sas_measures` for the full header syntax.
+
+## 4. Build the agent
+
+```{r}
+library(commons)
+
+sas <- sas_session("oda")
+
+agent <- commons(
+  client = ellmer::chat("anthropic/claude-sonnet-5"),
+  data_sources = list(trial = data_source(visits = read.csv("data/visits.csv"))),
+  semantic_layer = semantic_layer(sas_measures("measures", session = sas)),
+  sas = sas,
+  instructions = paste(
+    "The trial data is also in the SAS library TRIAL. In run_sas, assign it",
+    "with: libname trial \"/srv/trial\" access=readonly;"
+  )
+)
+
+commons_app(agent)
+```
+
+Each argument does one job:
+
+- `data_sources` gives the agent the same table to describe and query with SQL.
+- `sas_measures(session = sas)` runs the trusted measures on the SAS server.
+- `sas = sas` gives the agent a `run_sas` tool for its own SAS code. That code runs in a second SAS session, opened with the same configuration, so it can't change the librefs, options, or macros the measures rely on. Neither session connects until it is first needed.
+
+## Ask questions
+
+Ask a question the measure answers:
+
+> What was the mean response in each arm at week 12?
+
+The agent calls `arm_response` with `week = 12`. Because a trusted measure computed the answer, it is marked `Verified answer`.
+
+Then ask for something no measure covers:
+
+> Did the Active arm improve more from baseline than Placebo?
+
+The agent writes its own SAS, such as a `PROC MEANS` of each subject's change from week 0, and runs it with `run_sas`. The answer is ad hoc analysis, so it is marked `Cited` if the agent cites trusted text that supports its method, and `Untrusted` if it doesn't. Open the tool card in the chat to see the SAS code the agent ran and the output it got.
+
+## Security
+
+The agent's SAS code runs on the SAS server, outside the sandbox that commons uses for `run_r`. It can do anything your SAS account can, so secure the server and the account:
+
+- **Turn off host commands.** commons only runs the agent's code if the session reports `NOXCMD`. Otherwise `run_sas` refuses and the agent tells the user that SAS analysis isn't available.
+- **Run the server in LOCKDOWN mode**, which limits the files and libraries SAS code can reach.
+- **Use a low-privilege account** that can read only the data the agent needs.
+- **Open libraries read-only**, as the examples do with `access=readonly`.
+
+If you only want trusted measures, leave out `sas`. Then the agent never runs its own SAS code.
+
+## Troubleshooting
+
+- **SASPy can't connect**: check the configuration name you passed and the settings in `sascfg_personal.py`. For IOM connections, check that Java is installed and on the `PATH`.
+- **`run_sas is unavailable: the SAS session reports XCMD`**: ask your SAS administrator to run the server with `NOXCMD`, then run the check in step 1 again.
+- **A measure ran without creating `WORK.RESULT`**: the program must create the dataset named by `@output`. Check the libref and the `output out=` statement.
