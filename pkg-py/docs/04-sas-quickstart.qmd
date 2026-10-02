@@ -13,25 +13,36 @@ This quickstart builds a small agent over clinical trial data in four steps:
 
 ## 1. Install and check SAS
 
-You need access to a SAS server, such as SAS 9.4, SAS Viya, or [SAS OnDemand for Academics](https://www.sas.com/en_us/software/on-demand-for-academics.html). commons reaches it through [SASPy](https://sassoftware.github.io/saspy/), which the `sas` extra installs. Add the `shiny` extra for the chat UI:
+You need an account on a SAS server. This guide uses SAS Viya 4 with home directories turned on; SAS 9.4 works too. commons reaches it through [SASPy](https://sassoftware.github.io/saspy/), which the `sas` extra installs. Add the `shiny` extra for the chat UI. The commons repository is private, so pip needs Git credentials that can read it:
 
 ```sh
-pip install "commons[sas,shiny]"
+pip install "commons[sas,shiny] @ git+https://github.com/michaelmayer2/commons#subdirectory=pkg-py"
 ```
 
-Next, tell SASPy how to connect, in a `sascfg_personal.py` file. Most connections to a SAS 9.4 server use IOM, which needs Java. See the [SASPy configuration guide](https://sassoftware.github.io/saspy/configuration.html) for the settings each kind of server needs. This guide uses a configuration named `oda`, for SAS OnDemand for Academics.
+Next, tell SASPy how to connect, in a `sascfg_personal.py` file. For SAS Viya 4, SASPy connects over HTTP to a compute context:
+
+```python
+SAS_config_names = ["viya"]
+
+viya = {
+    "url": "https://viya.example.com",
+    "context": "SAS Studio compute context",
+}
+```
+
+SASPy asks for your user name and password when it connects. A deployed app has no one to answer, so store the credentials in an `_authinfo` file and name them with `authkey`. For other ways to sign in, and for the settings SAS 9.4 needs, see the [SASPy configuration guide](https://sassoftware.github.io/saspy/configuration.html). This guide uses the configuration name `viya`.
 
 Check that SAS runs code:
 
 ```python
 import saspy
 
-sas = saspy.SASsession(cfgname="oda")
+sas = saspy.SASsession(cfgname="viya")
 print(sas.submit("%put XCMD is %sysfunc(getoption(XCMD));")["LOG"])
 sas.endsas()
 ```
 
-The log should include `XCMD is NOXCMD`. If it says `XCMD`, the server allows code to run host commands. Trusted measures still work, but commons won't let the agent run its own code until the server runs with `NOXCMD`. Your SAS administrator sets this. See [Security](#security).
+The log should include `XCMD is NOXCMD`, which is SAS Viya 4's default. If it says `XCMD`, the server allows code to run host commands. Trusted measures still work, but commons won't let the agent run its own code until the server runs with `NOXCMD`. Your SAS administrator sets this. See [Security](#security).
 
 ## 2. Store the data in a SAS library
 
@@ -53,7 +64,7 @@ subject,arm,week,response
 106,Active,12,61
 ```
 
-SAS measures read data from SAS libraries, not from Python. Run this once to copy the table into a permanent library on the SAS server. This guide uses `/srv/trial`; use any directory on the server that your SAS account can write to:
+SAS measures read data from SAS libraries, not from Python. Run this once to copy the table into a permanent library in your home directory on the SAS server, `~/trial`. The `dlcreatedir` option makes SAS create the directory if it doesn't exist:
 
 ```python
 import pandas as pd
@@ -61,8 +72,8 @@ import saspy
 
 visits = pd.read_csv("data/visits.csv")
 
-sas = saspy.SASsession(cfgname="oda")
-sas.submit('options dlcreatedir; libname trial "/srv/trial";')
+sas = saspy.SASsession(cfgname="viya")
+sas.submit('options dlcreatedir; libname trial "~/trial";')
 sas.df2sd(visits, table="visits", libref="trial")
 sas.endsas()
 ```
@@ -72,7 +83,7 @@ sas.endsas()
 A measure is a validated SAS program with a header that tells commons its name, what it computes, and which arguments the model may set. Save this as `measures/trial.sas`:
 
 ```sas
-libname trial "/srv/trial" access=readonly;
+libname trial "~/trial" access=readonly;
 
 /**
  * Mean response by treatment arm
@@ -95,6 +106,7 @@ run;
 How the file is read:
 
 - The `libname` line comes before the first header, so it runs before every measure in the file.
+- `~` is the home directory of the account SAS runs under, so the app must connect as the account that stored the data. To share the data with other accounts, store it in a shared directory instead, and use that path in the measure file and in `instructions`.
 - `week` reaches the program as the macro variable `&week`. commons checks that the model passed an integer before the code runs.
 - The dataset named by `@output` comes back to the agent as a data frame. If the log has an `ERROR` line, the measure fails, and the agent can't present the result as verified.
 
@@ -109,7 +121,7 @@ import chatlas
 import commons
 import pandas as pd
 
-sas = commons.sas_session("oda")
+sas = commons.sas_session("viya")
 
 agent = commons.Commons(
     client=chatlas.ChatAuto("anthropic/claude-sonnet-5"),
@@ -122,7 +134,7 @@ agent = commons.Commons(
     sas=sas,
     instructions=(
         "The trial data is also in the SAS library TRIAL. In run_sas, assign it "
-        'with: libname trial "/srv/trial" access=readonly;'
+        'with: libname trial "~/trial" access=readonly;'
     ),
 )
 
@@ -156,7 +168,7 @@ The agent writes its own SAS, such as a `PROC MEANS` of each subject's change fr
 The agent's SAS code runs on the SAS server, outside the reach of anything commons runs locally. It can do anything your SAS account can, so secure the server and the account:
 
 - **Turn off host commands.** commons only runs the agent's code if the session reports `NOXCMD`. Otherwise `run_sas` refuses and the agent tells the user that SAS analysis isn't available.
-- **Run the server in LOCKDOWN mode**, which limits the files and libraries SAS code can reach.
+- **Keep LOCKDOWN mode on**, as SAS Viya 4 does by default. It limits SAS code to the paths your administrator allows, such as home directories.
 - **Use a low-privilege account** that can read only the data the agent needs.
 - **Open libraries read-only**, as the examples do with `access=readonly`.
 
@@ -164,6 +176,6 @@ If you only want trusted measures, leave out `sas`. Then the agent never runs it
 
 ## Troubleshooting
 
-- **SASPy can't connect**: check the configuration name you passed and the settings in `sascfg_personal.py`. For IOM connections, check that Java is installed and on the `PATH`.
+- **SASPy can't connect**: check the configuration name you passed and the settings in `sascfg_personal.py`. For SAS Viya, check `url`, `context`, and your credentials. For SAS 9.4 over IOM, check that Java is installed and on the `PATH`.
 - **`run_sas is unavailable: the SAS session reports XCMD`**: ask your SAS administrator to run the server with `NOXCMD`, then run the check in step 1 again.
 - **A measure ran without creating `WORK.RESULT`**: the program must create the dataset named by `@output`. Check the libref and the `output out=` statement.
