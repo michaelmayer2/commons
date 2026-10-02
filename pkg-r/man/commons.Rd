@@ -12,6 +12,7 @@ commons(
   ...,
   instructions = NULL,
   network = c("none", "full"),
+  sas = NULL,
   log = FALSE,
   share_with = NULL
 )
@@ -50,6 +51,18 @@ Linux and macOS. On unsupported hosts, local development can opt in to
 best-effort R guardrails with
 \code{options(commons.allow_unsafe_fallback = TRUE)}. These guardrails
 are not a security boundary.}
+
+\item{sas}{An optional \code{\link[=sas_session]{sas_session()}}. When given, the agent can also
+write and run its own SAS code with a \code{run_sas} tool, whose answers are
+ad hoc analysis like \code{run_r}'s. The code runs in a separate SAS session
+opened with the same configuration, never the one trusted SAS measures
+use.
+
+SAS code runs on the SAS server, outside the sandbox that contains
+\code{run_r}, so the server must be secured on its own: \code{run_sas} refuses to
+run unless the session reports \code{NOXCMD}, which turns off host commands.
+Run the server in LOCKDOWN mode, under a low-privilege account that can
+read only the libraries the agent needs.}
 
 \item{log}{Whether to request conversation trajectory capture with
 OpenTelemetry (default \code{FALSE}). When \code{TRUE}, commons checks the tracing

@@ -78,12 +78,30 @@ class SasSession:
         self.cfgname = cfgname
         self._saspy_options = saspy_options
         self._session: _SaspyLike | None = session
+        # A session built around one the caller opened has no configuration
+        # to open another from.
+        self._from_configuration = session is None
         self._lock = threading.RLock()
 
     def __repr__(self) -> str:
         state = "connected" if self._session is not None else "not connected"
         config = f" {self.cfgname!r}" if self.cfgname else ""
         return f"<SasSession{config} ({state})>"
+
+    def independent_copy(self) -> SasSession:
+        """A session of its own, opened from this one's configuration.
+
+        Agent-written SAS runs in one, so it cannot change the options,
+        librefs, or macros trusted SAS measures rely on.
+        """
+        if not self._from_configuration:
+            raise ValueError(
+                "This SasSession wraps a SASPy session you opened, so commons "
+                "cannot open a separate one for agent-written SAS.\n"
+                "Pass a SasSession built from a configuration, e.g. "
+                "commons.sas_session('oda')."
+            )
+        return SasSession(self.cfgname, **self._saspy_options)
 
     def _connect(self) -> _SaspyLike:
         if self._session is None:

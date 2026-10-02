@@ -292,6 +292,22 @@ agent.chat("How many species were observed at Oak Bluff?")
 
 Underneath, a `Commons` agent inherits from a `chatlas.Chat` object, but builds its own system prompt and tools. As such, it follows the `Chat` API and provides the `chat()` and `stream_async()` methods as ways to ask a question. The other `chatlas` entry points, such as `chat_async()`, `stream()`, and `chat_structured()`, are not supported and will raise `NotImplementedError` at this moment.
 
+### Analysis in SAS
+
+To let the agent write and run its own SAS code, pass a `commons.sas_session()` as `sas`:
+
+```python
+agent = commons.Commons(
+    client=chatlas.ChatAuto("anthropic/claude-sonnet-5"),
+    data_sources={"biodiversity": biodiversity},
+    sas=commons.sas_session("oda"),
+)
+```
+
+The agent then has a `run_sas` tool. Its answers are ad hoc analysis, like those from `run_sql`, so they are `Cited` or `Untrusted`. Data-frame results from other tools are uploaded to the agent's session as `WORK.R1`, `WORK.R2`, and so on. Agent code runs in a SAS session of its own, opened with the same configuration, so it cannot change the options, librefs, or macros that trusted SAS measures rely on.
+
+SAS code runs on the SAS server, beyond anything commons can sandbox, so secure the server itself. `run_sas` refuses to run unless the session reports `NOXCMD`, which turns off host commands. Also run the server in LOCKDOWN mode, under a low-privilege account that can read only the libraries the agent needs.
+
 ### Chat UI
 
 The above examples will build a terminal-based agent without any UI attached. If you want to

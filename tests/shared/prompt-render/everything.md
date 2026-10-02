@@ -37,6 +37,7 @@ These parts of tool outputs are not citable:
 - Result values from `call_metrics`. An answer based on that tool alone is already trusted and needs no citation.
 - Query result rows from `run_sql`.
 - Code, measure source, plots, and textual output from `run_code`.
+- Code, listings, and log messages from `run_sas`.
 
 If exact citable text you have seen supports the way you computed an answer,
 cite it using this format:

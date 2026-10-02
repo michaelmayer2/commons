@@ -28,7 +28,8 @@ sas_session <- function(cfgname = NULL) {
 }
 
 # A session is the four operations a SAS measure needs, so another route to
-# SAS can stand in for sasquatch.
+# SAS can stand in for sasquatch, and optionally a way to open a separate
+# session on the same configuration, for agent-written SAS.
 new_sas_session <- function(backend, cfgname = NULL) {
   structure(
     list(
@@ -36,6 +37,7 @@ new_sas_session <- function(backend, cfgname = NULL) {
       table_exists = backend$table_exists,
       to_df = backend$to_df,
       from_df = backend$from_df,
+      separate = backend$separate,
       cfgname = cfgname
     ),
     class = "commons_sas_session"
@@ -85,6 +87,9 @@ sasquatch_backend <- function(cfgname) {
     from_df = function(df, table, libref = "WORK") {
       connect()
       sasquatch::sas_from_r(df, table, libref)
+    },
+    separate = function() {
+      new_sas_session(saspy_backend(cfgname), cfgname = cfgname)
     }
   )
 }

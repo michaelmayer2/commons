@@ -33,6 +33,7 @@
           "has_call_metrics": false,
           "has_call_calculation": false,
           "has_execution_tool": false,
+          "has_run_sas": false,
           "execution_tool": "run_code",
           "has_definitions": false,
           "has_complete_definitions": false
@@ -64,6 +65,7 @@
           "has_call_metrics": true,
           "has_call_calculation": false,
           "has_execution_tool": true,
+          "has_run_sas": true,
           "execution_tool": "run_code",
           "has_definitions": true,
           "has_complete_definitions": true
@@ -95,6 +97,7 @@
           "has_call_metrics": false,
           "has_call_calculation": false,
           "has_execution_tool": false,
+          "has_run_sas": false,
           "execution_tool": "run_code",
           "has_definitions": false,
           "has_complete_definitions": false
@@ -126,6 +129,7 @@
           "has_call_metrics": false,
           "has_call_calculation": false,
           "has_execution_tool": false,
+          "has_run_sas": false,
           "execution_tool": "run_code",
           "has_definitions": true,
           "has_complete_definitions": false
@@ -157,6 +161,7 @@
           "has_call_metrics": false,
           "has_call_calculation": true,
           "has_execution_tool": true,
+          "has_run_sas": false,
           "execution_tool": "run_code",
           "has_definitions": true,
           "has_complete_definitions": false
@@ -218,7 +223,8 @@
           "has_call_measure": false,
           "has_call_metrics": false,
           "has_call_calculation": false,
-          "has_execution_tool": false
+          "has_execution_tool": false,
+          "has_run_sas": false
         }
       },
       {
@@ -231,7 +237,8 @@
           "call_measure",
           "call_metrics",
           "call_calculation",
-          "$execution_tool"
+          "$execution_tool",
+          "run_sas"
         ],
         "expected": {
           "has_search_pool": true,
@@ -241,7 +248,8 @@
           "has_call_measure": true,
           "has_call_metrics": true,
           "has_call_calculation": true,
-          "has_execution_tool": true
+          "has_execution_tool": true,
+          "has_run_sas": true
         }
       },
       {
@@ -258,7 +266,8 @@
           "has_call_measure": false,
           "has_call_metrics": false,
           "has_call_calculation": true,
-          "has_execution_tool": true
+          "has_execution_tool": true,
+          "has_run_sas": false
         }
       },
       {
@@ -276,7 +285,8 @@
           "has_call_measure": false,
           "has_call_metrics": true,
           "has_call_calculation": false,
-          "has_execution_tool": false
+          "has_execution_tool": false,
+          "has_run_sas": false
         }
       },
       {
@@ -290,7 +300,8 @@
           "has_call_measure": false,
           "has_call_metrics": false,
           "has_call_calculation": false,
-          "has_execution_tool": false
+          "has_execution_tool": false,
+          "has_run_sas": false
         }
       }
     ]

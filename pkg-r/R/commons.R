@@ -39,6 +39,17 @@
 #'   best-effort R guardrails with
 #'   `options(commons.allow_unsafe_fallback = TRUE)`. These guardrails
 #'   are not a security boundary.
+#' @param sas An optional [sas_session()]. When given, the agent can also
+#'   write and run its own SAS code with a `run_sas` tool, whose answers are
+#'   ad hoc analysis like `run_r`'s. The code runs in a separate SAS session
+#'   opened with the same configuration, never the one trusted SAS measures
+#'   use.
+#'
+#'   SAS code runs on the SAS server, outside the sandbox that contains
+#'   `run_r`, so the server must be secured on its own: `run_sas` refuses to
+#'   run unless the session reports `NOXCMD`, which turns off host commands.
+#'   Run the server in LOCKDOWN mode, under a low-privilege account that can
+#'   read only the libraries the agent needs.
 #' @param log Whether to request conversation trajectory capture with
 #'   OpenTelemetry (default `FALSE`). When `TRUE`, commons checks the tracing
 #'   setup and warns with setup steps when it is incomplete. This feature
@@ -172,6 +183,7 @@ commons <- function(
   ...,
   instructions = NULL,
   network = c("none", "full"),
+  sas = NULL,
   log = FALSE,
   share_with = NULL
 ) {
@@ -196,6 +208,11 @@ commons <- function(
   check_semantic_layer(semantic_layer)
   network <- rlang::arg_match(network)
   protection <- run_r_protection_mode()
+  if (!is.null(sas) && !inherits(sas, "commons_sas_session")) {
+    cli::cli_abort(
+      "{.arg sas} must be a {.fn sas_session} or {.code NULL}, not {.obj_type_friendly {sas}}."
+    )
+  }
   check_instructions(instructions)
   rlang::check_bool(log)
   check_share_with(share_with)
@@ -208,6 +225,7 @@ commons <- function(
     network = network,
     protection = protection,
     instructions = instructions,
+    sas = sas,
     log = log,
     share_with = share_with
   )
@@ -226,6 +244,7 @@ Commons <- R6::R6Class(
       instructions = NULL,
       network = c("none", "full"),
       protection = run_r_protection_mode(),
+      sas = NULL,
       log = FALSE,
       share_with = NULL
     ) {
@@ -273,6 +292,12 @@ Commons <- R6::R6Class(
 
       private$handles <- new_handle_store()
       private$worker <- new_r_worker(network, protection)
+      if (!is.null(sas)) {
+        private$agent_sas <- new_agent_sas(
+          separate_sas_session(sas),
+          private$handles
+        )
+      }
       private$corpus <- build_citation_corpus(
         private$context_layer,
         private$registry,
@@ -477,6 +502,7 @@ Commons <- R6::R6Class(
     first_touch = NULL,
     handles = NULL,
     worker = NULL,
+    agent_sas = NULL,
     corpus = NULL,
     citation_request = NULL,
     restore_reminder_pending = FALSE,

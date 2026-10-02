@@ -311,3 +311,19 @@ commons_app(agent)
 ```
 
 Use `commons_app()` to run the agent in a local or single-user Shiny app. For multi-user deployments, compose shinychat's UI with `commons_theme()` on the page and `commons_server()` in the server, and create a new agent for each Shiny session. `commons_server()` warms the agent during post-startup idle time; `agent$prewarm()` warms the context index and pins cache ahead of deployment. This example assumes that `observations` and `site_area` are data frames loaded when the app starts.
+
+### Analysis in SAS
+
+To let the agent write and run its own SAS code, pass a `sas_session()` as `sas`:
+
+```r
+agent <- commons(
+  client = ellmer::chat("anthropic/claude-sonnet-5"),
+  data_sources = list(biodiversity = biodiversity),
+  sas = sas_session("oda")
+)
+```
+
+The agent then has a `run_sas` tool. Its answers are ad hoc analysis, like those from `run_r`, so they are `Cited` or `Untrusted`. Data-frame results from other tools are uploaded to the agent's session as `WORK.R1`, `WORK.R2`, and so on. Agent code runs in a SAS session of its own, opened with the same configuration, so it cannot change the options, librefs, or macros that trusted SAS measures rely on.
+
+SAS code runs on the SAS server, outside the sandbox that contains `run_r`, so secure the server itself. `run_sas` refuses to run unless the session reports `NOXCMD`, which turns off host commands. Also run the server in LOCKDOWN mode, under a low-privilege account that can read only the libraries the agent needs.

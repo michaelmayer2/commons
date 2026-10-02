@@ -178,7 +178,8 @@ cited_tools <- c(
   "call_measure",
   "call_metrics",
   "call_calculation",
-  "execution_tool"
+  "execution_tool",
+  "run_sas"
 )
 
 tool_availability <- function(tools) {

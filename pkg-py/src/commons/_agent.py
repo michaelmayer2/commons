@@ -40,6 +40,8 @@ from ._prompt import (
 )
 from ._provenance import collect_appended_tags, derive_provenance_tag, provenance_aside
 from ._reminders import append_restored_conversation_reminder, append_turn_reminder
+from ._run_sas import run_sas_tool
+from ._sas import SasSession
 from ._tools import FirstTouch, ToolContext, build_commons_tools
 
 __all__ = ["Commons"]
@@ -84,6 +86,15 @@ class Commons(Chat[Any, Any]):
     `## Additional instructions` heading at the end of commons' built-in
     system prompt, as a string or the path to a text or Markdown file.
 
+    `sas` is a `SasSession` from `commons.sas_session()`. It gives the agent a
+    `run_sas` tool for writing its own SAS, whose answers are classified like
+    any other ad hoc analysis. Agent code runs in a SAS session of its own,
+    opened from the same configuration on first use, never in the one trusted
+    SAS measures use. Because it runs on the SAS server rather than in a local
+    sandbox, the tool refuses to run in a session that allows host commands:
+    start the SAS server with NOXCMD, and preferably in LOCKDOWN mode, under
+    an account that can read only what the agent may read.
+
     Construction raises a TypeError if `client` is not a `chatlas.Chat`, if
     an entry of `data_sources` is not a `DataSource`, or if a layer is not
     the layer its argument claims; a ValueError if `data_sources` names no
@@ -99,6 +110,7 @@ class Commons(Chat[Any, Any]):
         context_layer: ContextLayer | None = None,
         *,
         instructions: str | None = None,
+        sas: SasSession | None = None,
     ) -> None:
         if not isinstance(client, Chat):
             raise TypeError(
@@ -124,6 +136,11 @@ class Commons(Chat[Any, Any]):
                 f"{type(semantic_layer).__name__}."
             )
         check_instructions(instructions)
+        if sas is not None and not isinstance(sas, SasSession):
+            raise TypeError(
+                "sas must be a SasSession from commons.sas_session(), or None, "
+                f"not {type(sas).__name__}."
+            )
 
         # Share the provider, which carries the chosen model; shallow-copy
         # the chat kwargs so later changes don't cross between the two.
@@ -164,6 +181,12 @@ class Commons(Chat[Any, Any]):
                 first_touch=self._first_touch,
             )
         )
+        if sas is not None:
+            tools.append(
+                run_sas_tool(
+                    sas.independent_copy(), self._handles, self._citation_request
+                )
+            )
         self.set_tools(list(tools))
         self.system_prompt = _system_prompt(
             sources,

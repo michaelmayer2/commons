@@ -36,7 +36,8 @@ build_commons_tools <- function(self, private) {
       tool_run_sql(private),
       tool_run_r(private),
       tool_describe_trust_system()
-    )
+    ),
+    if (!is.null(private$agent_sas)) list(tool_run_sas(private))
   )
 }
 

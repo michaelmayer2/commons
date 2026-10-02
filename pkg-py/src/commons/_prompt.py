@@ -37,8 +37,9 @@ _BLANK_LINES = re.compile(r"\n[ \t]*\n(?:[ \t]*\n)+")
 # this is the tool name that earns the flag here.
 EXECUTION_TOOL = "run_python"
 
-# Every tool the citable and non-citable lists branch on. The last entry is the
-# flag stem for whichever tool EXECUTION_TOOL names.
+# Every tool the citable and non-citable lists branch on. `execution_tool` is
+# the flag stem for whichever tool EXECUTION_TOOL names; run_sas has the same
+# name in either package, so it keeps its own.
 CITED_TOOLS = (
     "search_pool",
     "search_context",
@@ -48,6 +49,7 @@ CITED_TOOLS = (
     "call_metrics",
     "call_calculation",
     "execution_tool",
+    "run_sas",
 )
 
 

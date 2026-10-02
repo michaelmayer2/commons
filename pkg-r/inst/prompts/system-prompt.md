@@ -62,6 +62,9 @@ These parts of tool outputs are not citable:
 {% if has_execution_tool %}
 - Code, measure source, plots, and textual output from `{{ execution_tool }}`.
 {% endif %}
+{% if has_run_sas %}
+- Code, listings, and log messages from `run_sas`.
+{% endif %}
 
 If exact citable text you have seen supports the way you computed an answer,
 cite it using this format:
