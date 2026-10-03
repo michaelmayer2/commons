@@ -13,10 +13,10 @@ This quickstart builds a small agent over clinical trial data in four steps:
 
 ## 1. Install and check SLC
 
-You need a licensed Altair SLC installation. commons reaches it through [slcPy](https://github.com/michaelmayer2/slcPy). Add `pyarrow` for faster data transfer, and the `shiny` extra for the chat UI. The commons repository is private, so pip needs Git credentials that can read it:
+You need a licensed Altair SLC installation. commons reaches it through [slcPy](https://github.com/michaelmayer2/slcPy). Add `pyarrow` for faster data transfer, and the `shiny` extra for the chat UI. The commons repository is private, so pip needs Git credentials that can read it. SLC support is on the `slc-support` branch until it is merged, so the command installs from there:
 
 ```sh
-pip install "commons[shiny] @ git+https://github.com/michaelmayer2/commons#subdirectory=pkg-py" pyarrow "slcPy @ git+https://github.com/michaelmayer2/slcPy"
+pip install "commons[shiny] @ git+https://github.com/michaelmayer2/commons@slc-support#subdirectory=pkg-py" pyarrow "slcPy @ git+https://github.com/michaelmayer2/slcPy"
 ```
 
 slcPy looks for SLC in `$WPSHOME` first, then in `/opt/altair/slc/2026`. If SLC is installed somewhere else, set `WPSHOME`:

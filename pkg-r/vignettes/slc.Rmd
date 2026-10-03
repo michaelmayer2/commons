@@ -31,10 +31,10 @@ This quickstart builds a small agent over clinical trial data in four steps:
 
 ## 1. Install and check SLC
 
-You need a licensed Altair SLC installation. commons reaches it through [slcR](https://github.com/sol-eng/slcR). The commons repository is private, so pak needs a GitHub token that can read it, in `GITHUB_PAT`:
+You need a licensed Altair SLC installation. commons reaches it through [slcR](https://github.com/sol-eng/slcR). The commons repository is private, so pak needs a GitHub token that can read it, in `GITHUB_PAT`. SLC support is on the `slc-support` branch until it is merged, so the command installs from there:
 
 ```{r}
-pak::pak(c("michaelmayer2/commons/pkg-r", "sol-eng/slcR"))
+pak::pak(c("michaelmayer2/commons/pkg-r@slc-support", "sol-eng/slcR"))
 ```
 
 slcR looks for SLC in `$WPSHOME` first, then in the default installation paths such as `/opt/altair/slc/2026`. If SLC is installed somewhere else, set `WPSHOME`, for instance in `.Renviron`:
