@@ -187,17 +187,19 @@ def test_claude_5_model_ids_are_recognized_across_providers():
     assert not is_claude_5_model(None)
 
 
-def test_missing_instruction_paths_are_recognized(tmp_path):
-    with pytest.raises(FileNotFoundError):
-        check_instructions("missing-instructions.Rmd")
-    with pytest.raises(FileNotFoundError):
-        check_instructions("missing-instructions.template")
-    with pytest.raises(FileNotFoundError):
-        check_instructions("missing-dir/instructions")
-    check_instructions("Be concise.")
-    check_instructions("Line one.\nLine two.")
+def test_instruction_paths_match_shared_fixture():
+    cases = load_shared_fixture("instructions")["check_instructions"]["cases"]
+    assert cases
+    for case in cases:
+        if case.get("error") == "missing_file":
+            with pytest.raises(FileNotFoundError):
+                check_instructions(case["input"])
+        else:
+            check_instructions(case["input"])
     check_instructions(None)
 
+
+def test_instructions_are_read_from_a_file(tmp_path):
     path = tmp_path / "instructions.md"
     path.write_text("Prefer weekly grain.\n", encoding="utf-8")
     assert read_instructions(str(path)) == "Prefer weekly grain."

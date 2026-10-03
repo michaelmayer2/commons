@@ -1,0 +1,51 @@
+{
+  "check_instructions": {
+    "description": "Which `instructions` strings are read as a path to an instructions file. A string read as a path must name a file that exists, so a mistyped path fails instead of reaching the model as an instruction. Prose has whitespace and a path doesn't, so a string with any whitespace is text, even when it names a path of its own. No case names a file that exists, so `missing_file` is the error a path gets; the wording belongs to each language.",
+    "cases": [
+      {
+        "name": "a file name with a known extension",
+        "input": "missing-instructions.Rmd",
+        "error": "missing_file"
+      },
+      {
+        "name": "a file name with any extension",
+        "input": "missing-instructions.template",
+        "error": "missing_file"
+      },
+      {
+        "name": "a relative path without an extension",
+        "input": "missing-dir/instructions",
+        "error": "missing_file"
+      },
+      {
+        "name": "a Windows path",
+        "input": "missing-dir\\instructions",
+        "error": "missing_file"
+      },
+      {
+        "name": "a sentence",
+        "input": "Be concise."
+      },
+      {
+        "name": "a single word",
+        "input": "concise"
+      },
+      {
+        "name": "several lines",
+        "input": "Line one.\nLine two."
+      },
+      {
+        "name": "a sentence naming a directory",
+        "input": "In run_sas, assign it with: libname trial \"/srv/trial\" access=readonly;"
+      },
+      {
+        "name": "a sentence naming a file",
+        "input": "Follow the style in docs/style.md."
+      },
+      {
+        "name": "a sentence with a URL",
+        "input": "Definitions are at https://example.com/glossary."
+      }
+    ]
+  }
+}

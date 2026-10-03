@@ -167,18 +167,17 @@ test_that("tool availability follows the shared cases", {
   }
 })
 
-test_that("missing instruction paths are recognized", {
-  expect_error(
-    check_instructions("missing-instructions.Rmd"),
-    "does not exist"
-  )
-  expect_error(
-    check_instructions("missing-instructions.template"),
-    "does not exist"
-  )
-  expect_error(check_instructions("missing-dir/instructions"), "does not exist")
-  expect_no_error(check_instructions("Be concise."))
-  expect_no_error(check_instructions("Line one.\nLine two."))
+test_that("instruction paths match the shared fixture", {
+  cases <- shared_fixture("instructions")$check_instructions$cases
+  expect_gt(length(cases), 0)
+
+  for (case in cases) {
+    if (identical(case$error, "missing_file")) {
+      expect_error(check_instructions(case$input), "does not exist", info = case$name)
+    } else {
+      expect_no_error(check_instructions(case$input))
+    }
+  }
   expect_no_error(check_instructions(NULL))
 })
 

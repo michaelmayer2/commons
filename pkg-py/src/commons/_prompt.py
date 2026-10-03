@@ -262,9 +262,6 @@ def is_claude_5_model(model: str | None) -> bool:
     return _CLAUDE_5.search(model.lower()) is not None
 
 
-_INSTRUCTION_EXTENSIONS = ("md", "rmd", "txt", "prompt")
-
-
 def check_instructions(instructions: str | None) -> None:
     """Fail when instructions name a file that is not there.
 
@@ -287,12 +284,9 @@ def read_instructions(instructions: str | None) -> str | None:
 
 
 def _looks_like_path(instructions: str) -> bool:
-    if "\n" in instructions:
+    # Prose has whitespace and a path to an instructions file doesn't, even
+    # when the prose names a path of its own, such as a libname's directory.
+    if re.search(r"\s", instructions):
         return False
-    extension = os.path.splitext(instructions)[1].lstrip(".").lower()
-    return (
-        "/" in instructions
-        or "\\" in instructions
-        or extension in _INSTRUCTION_EXTENSIONS
-        or (bool(extension) and not re.search(r"\s", instructions))
-    )
+    extension = os.path.splitext(instructions)[1].lstrip(".")
+    return "/" in instructions or "\\" in instructions or bool(extension)

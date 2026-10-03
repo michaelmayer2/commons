@@ -356,15 +356,13 @@ read_instructions <- function(instructions) {
   )
 }
 
+# Prose has whitespace and a path to an instructions file doesn't, even when the
+# prose names a path of its own, such as a libname's directory.
 looks_like_instructions_path <- function(instructions) {
-  if (grepl("\n", instructions, fixed = TRUE)) {
+  if (grepl("[[:space:]]", instructions)) {
     return(FALSE)
   }
-
-  extension <- tolower(tools::file_ext(instructions))
-  grepl("[/\\\\]", instructions) ||
-    extension %in% c("md", "rmd", "txt", "prompt") ||
-    (nzchar(extension) && !grepl("[[:space:]]", instructions))
+  grepl("[/\\\\]", instructions) || nzchar(tools::file_ext(instructions))
 }
 
 dictionary_context_text <- function(sources) {
