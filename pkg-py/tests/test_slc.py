@@ -7,6 +7,7 @@ only when slcPy can start SLC.
 """
 
 import os
+import subprocess
 import sys
 import types
 from typing import Any
@@ -90,6 +91,9 @@ class StandInSlc:
 
     def get_library(self, name: str = "WORK") -> StandInLibrary:
         return StandInLibrary(self, name)
+
+    def shutdown(self) -> None:
+        pass
 
 
 class NameValuePair:
@@ -214,3 +218,23 @@ def test_a_sas_measure_runs_on_a_live_slc_process() -> None:
     frame = sas_measure(spec, session).func(sex="F")
 
     assert len(frame) == 2
+
+
+@pytest.mark.skipif(
+    not os.environ.get("WPSHOME") and not os.path.isdir("/opt/altair/slc/2026"),
+    reason="Altair SLC is not installed",
+)
+def test_python_exits_after_using_a_live_slc_process() -> None:
+    pytest.importorskip("slc")
+    script = (
+        "import commons\n"
+        "session = commons.slc_session()\n"
+        "session.submit('data work.result; x = 1; run;')\n"
+        "assert session.table_exists('result')\n"
+    )
+
+    exited = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, timeout=60, check=False
+    )
+
+    assert exited.returncode == 0, exited.stderr.decode()

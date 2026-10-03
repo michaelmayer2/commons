@@ -13,6 +13,7 @@ implements the same contract for R.
 
 from __future__ import annotations
 
+import atexit
 import re
 import threading
 from collections.abc import Mapping, Sequence
@@ -178,7 +179,12 @@ class SlcSession(SasSession):
                     "and set WPSHOME if SLC is not installed in /opt/altair/slc/2026."
                 ) from error
             options = [NameValuePair(name, value) for name, value in self.sys_options.items()]
-            self._session = _SlcAdapter(Slc(options))
+            slc = Slc(options)
+            # Left to itself, slcPy shuts SLC down from a finalizer as Python
+            # exits, after the thread that reads SLC's replies has stopped,
+            # and then waits for a reply forever.
+            atexit.register(slc.shutdown)
+            self._session = _SlcAdapter(slc)
         return self._session
 
 
