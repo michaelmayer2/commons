@@ -111,7 +111,9 @@ sasquatch_backend <- function(cfgname) {
 #'
 #' slcR looks for SLC in `$WPSHOME`, then in the default installation paths.
 #'
-#' @param sys_options A named list of SLC system options to start SLC with.
+#' @param sys_options A named list of SLC system options to start SLC with,
+#'   on top of `XCMD = "NO"`, which shuts off shell commands. Name `XCMD`
+#'   here to override it.
 #'
 #' @return A `commons_sas_session` object.
 #'
@@ -125,11 +127,26 @@ slc_session <- function(sys_options = list()) {
   if (!is.list(sys_options) || (length(sys_options) && !rlang::is_named(sys_options))) {
     cli::cli_abort("{.arg sys_options} must be a named list.")
   }
-  new_sas_session(slcr_backend(sys_options), engine = "SLC")
+  new_sas_session(slcr_backend(slc_options(sys_options)), engine = "SLC")
+}
+
+slc_default_options <- list(XCMD = "NO")
+
+# SLC's default system options, replaced by any the caller names.
+slc_options <- function(sys_options) {
+  named <- toupper(names(sys_options))
+  defaults <- slc_default_options[!toupper(names(slc_default_options)) %in% named]
+  c(defaults, sys_options)
 }
 
 slcr_start <- function(sys_options) {
-  rlang::check_installed("slcR", reason = "to run SAS code on Altair SLC.")
+  # Older slcR passes system options on the wpslinks command line, which
+  # rejects them.
+  rlang::check_installed(
+    "slcR",
+    version = "0.3.3",
+    reason = "to run SAS code on Altair SLC."
+  )
   slcR::Slc$new(sys_options)
 }
 

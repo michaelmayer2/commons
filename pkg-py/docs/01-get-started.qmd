@@ -310,7 +310,7 @@ The agent then has a `run_sas` tool. Its answers are ad hoc analysis, like those
 
 SAS code runs on the SAS server, beyond anything commons can sandbox, so secure the server itself. `run_sas` refuses to run unless the session reports `NOXCMD`, which turns off host commands. Also run the server in LOCKDOWN mode, under a low-privilege account that can read only the libraries the agent needs.
 
-`sas` can also be a `commons.slc_session()`, in which case the agent's code runs in a separate Altair SLC process. SLC runs on the same machine as the app and can read and write any file the app's account can, so start it with `NOXCMD` and run the app under an account with access to only what the agent needs.
+`sas` can also be a `commons.slc_session()`, in which case the agent's code runs in a separate Altair SLC process. SLC runs on the same machine as the app and can read and write any file the app's account can. commons starts it with shell commands turned off. Also run the app under an account with access to only what the agent needs.
 
 ### Chat UI
 

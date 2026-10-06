@@ -43,16 +43,16 @@ slcR looks for SLC in `$WPSHOME` first, then in the default installation paths s
 WPSHOME=/path/to/altair/slc/2026
 ```
 
-Check that SLC starts and runs code:
+Check that SLC starts and runs code. This starts SLC the way commons does, with shell commands turned off:
 
 ```{r}
-slc <- slcR::Slc$new()
+slc <- slcR::Slc$new(list(XCMD = "NO"))
 slc$submit("%put XCMD is %sysfunc(getoption(XCMD));")
 cat(slc$get_log())
 slc$shutdown()
 ```
 
-The log should include `XCMD is NOXCMD`. If it says `XCMD`, SLC allows code to run shell commands. Trusted measures still work, but commons won't let the agent run its own code until SLC starts with `NOXCMD`, usually set in SLC's system configuration file. See [Security](#security).
+The log should include `XCMD is NOXCMD`. `slc_session()` starts SLC with `XCMD = "NO"` unless you pass `XCMD` in `sys_options` yourself, so you don't need to change SLC's configuration. See [Security](#security).
 
 ## 2. Store the data in an SLC library
 
@@ -166,7 +166,7 @@ The agent writes its own SAS, such as a `PROC MEANS` of each subject's change fr
 
 SLC runs on the same machine as your app, under the same account. That means the agent's SAS code can read and write any file the account can:
 
-- **Turn off shell commands.** commons only runs the agent's code if SLC reports `NOXCMD`. Otherwise `run_sas` refuses and the agent tells the user that SAS analysis isn't available.
+- **Keep shell commands off.** commons starts SLC with `XCMD = "NO"`, and only runs the agent's code if SLC reports `NOXCMD`. If you turn `XCMD` on through `sys_options`, `run_sas` refuses and the agent tells the user that SAS analysis isn't available.
 - **Use a restricted account.** Run the app under an account that can reach only the data the agent needs.
 - **Open libraries read-only**, as the examples do with `access=readonly`.
 
@@ -175,5 +175,5 @@ If you only want trusted measures, leave out `sas`. Then the agent never runs it
 ## Troubleshooting
 
 - **`Could not find SLC binary`**: set `WPSHOME` to the SLC installation directory.
-- **`run_sas is unavailable: the SAS session reports XCMD`**: start SLC with `NOXCMD`, then run the check in step 1 again.
+- **`run_sas is unavailable: the SAS session reports XCMD`**: remove `XCMD` from `sys_options`, then run the check in step 1 again.
 - **A measure ran without creating `WORK.RESULT`**: the program must create the dataset named by `@output`. Check the libref and the `output out=` statement.

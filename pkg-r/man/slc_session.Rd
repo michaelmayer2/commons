@@ -7,7 +7,9 @@
 slc_session(sys_options = list())
 }
 \arguments{
-\item{sys_options}{A named list of SLC system options to start SLC with.}
+\item{sys_options}{A named list of SLC system options to start SLC with,
+on top of \code{XCMD = "NO"}, which shuts off shell commands. Name \code{XCMD}
+here to override it.}
 }
 \value{
 A \code{commons_sas_session} object.

@@ -66,5 +66,50 @@
         "allowed": false
       }
     ]
+  },
+  "slc_options": {
+    "description": "The system options an SLC session starts with: `defaults` first, then the caller's options in their order, where a caller's option replaces a default of the same name, compared case-insensitively. XCMD is off by default, so an SLC session passes the probe without any configuration file; a caller can still turn it on, and the probe then refuses agent code.",
+    "defaults": {
+      "XCMD": "NO"
+    },
+    "cases": [
+      {
+        "name": "no options",
+        "given": {},
+        "expected": {
+          "XCMD": "NO"
+        }
+      },
+      {
+        "name": "other options follow the default",
+        "given": {
+          "ENCODING": "UTF-8"
+        },
+        "expected": {
+          "XCMD": "NO",
+          "ENCODING": "UTF-8"
+        }
+      },
+      {
+        "name": "a caller can turn XCMD on",
+        "given": {
+          "ENCODING": "UTF-8",
+          "XCMD": "YES"
+        },
+        "expected": {
+          "ENCODING": "UTF-8",
+          "XCMD": "YES"
+        }
+      },
+      {
+        "name": "names match whatever their case",
+        "given": {
+          "xcmd": "YES"
+        },
+        "expected": {
+          "xcmd": "YES"
+        }
+      }
+    ]
   }
 }

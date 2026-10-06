@@ -107,8 +107,23 @@ test_that("an agent runs agent code in an SLC process of its own", {
   expect_equal(slc$started$processes[[1]]$submitted[[1]], sas_xcmd_probe)
 })
 
+test_that("a live SLC process runs agent code", {
+  skip_if_not_installed("slcR", "0.3.3")
+  skip_if(
+    !nzchar(Sys.getenv("WPSHOME")) && !dir.exists("/opt/altair/slc/2026"),
+    "Altair SLC is not installed."
+  )
+  agent <- test_agent(sas = slc_session())
+
+  res <- agent_tool(agent, "run_sas")(
+    code = "data work.one; x = 1; run; proc print data=work.one; run;"
+  )
+
+  expect_true(startsWith(res@value, "Output:"))
+})
+
 test_that("a SAS measure runs on a live SLC process", {
-  skip_if_not_installed("slcR")
+  skip_if_not_installed("slcR", "0.3.3")
   skip_if(
     !nzchar(Sys.getenv("WPSHOME")) && !dir.exists("/opt/altair/slc/2026"),
     "Altair SLC is not installed."

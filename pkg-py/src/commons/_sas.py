@@ -145,18 +145,30 @@ def sas_session(cfgname: str | None = None, **saspy_options: Any) -> SasSession:
     return SasSession(cfgname, **saspy_options)
 
 
+SLC_DEFAULT_OPTIONS = {"XCMD": "NO"}
+
+
+def slc_options(sys_options: Mapping[str, str] | None) -> dict[str, str]:
+    """SLC's default system options, replaced by any the caller names."""
+    given = dict(sys_options or {})
+    named = {name.upper() for name in given}
+    defaults = {k: v for k, v in SLC_DEFAULT_OPTIONS.items() if k.upper() not in named}
+    return defaults | given
+
+
 class SlcSession(SasSession):
     """A connection to Altair SLC, started through slcPy on first use.
 
     SLC runs SAS-language code in a local process rather than on a SAS
-    server. ``sys_options`` are SLC system options to start it with. It
-    answers the same calls as a :class:`SasSession`, so SAS measures and
-    agent-written SAS run on it unchanged.
+    server. ``sys_options`` are SLC system options to start it with, on top
+    of ``XCMD=NO``, which shuts off shell commands. It answers the same calls
+    as a :class:`SasSession`, so SAS measures and agent-written SAS run on it
+    unchanged.
     """
 
     def __init__(self, sys_options: Mapping[str, str] | None = None) -> None:
         super().__init__()
-        self.sys_options = dict(sys_options or {})
+        self.sys_options = slc_options(sys_options)
 
     def __repr__(self) -> str:
         state = "started" if self._session is not None else "not started"

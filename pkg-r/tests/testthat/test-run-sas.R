@@ -7,12 +7,14 @@ run_sas_fixture <- shared_fixture("run-sas")
 test_that("the run_sas fixture is not empty", {
   expect_gt(length(run_sas_fixture$value$cases), 0)
   expect_gt(length(run_sas_fixture$probe$cases), 0)
+  expect_gt(length(run_sas_fixture$slc_options$cases), 0)
 })
 
 test_that("the limits and probe match the shared fixture", {
   expect_equal(run_sas_fixture$value$max_listing_chars, run_sas_max_listing_chars)
   expect_equal(run_sas_fixture$value$max_log_chars, run_sas_max_log_chars)
   expect_equal(run_sas_fixture$probe$code, sas_xcmd_probe)
+  expect_equal(run_sas_fixture$slc_options$defaults, slc_default_options)
 })
 
 expand_repeats <- function(text) {
@@ -41,6 +43,12 @@ for (case in run_sas_fixture$probe$cases) {
     setting <- sas_xcmd_setting(case$log)
     expect_equal(setting, case$expected)
     expect_equal(identical(setting, "NOXCMD"), case$allowed)
+  })
+}
+
+for (case in run_sas_fixture$slc_options$cases) {
+  test_that(paste("SLC options:", case$name), {
+    expect_equal(slc_options(case$given), case$expected)
   })
 }
 

@@ -29,6 +29,7 @@ from commons._run_sas import (
     run_sas_value,
     xcmd_setting,
 )
+from commons._sas import SLC_DEFAULT_OPTIONS, slc_options
 
 from ._provider import scripted_chat
 from ._shared import load_shared_fixture
@@ -36,17 +37,20 @@ from ._shared import load_shared_fixture
 FIXTURE = load_shared_fixture("run-sas")
 VALUE_CASES: list[dict[str, Any]] = FIXTURE["value"]["cases"]
 PROBE_CASES: list[dict[str, Any]] = FIXTURE["probe"]["cases"]
+SLC_OPTION_CASES: list[dict[str, Any]] = FIXTURE["slc_options"]["cases"]
 
 
 def test_the_run_sas_fixture_is_not_empty() -> None:
     assert VALUE_CASES
     assert PROBE_CASES
+    assert SLC_OPTION_CASES
 
 
 def test_the_limits_and_probe_match_the_shared_fixture() -> None:
     assert FIXTURE["value"]["max_listing_chars"] == MAX_LISTING_CHARS
     assert FIXTURE["value"]["max_log_chars"] == MAX_LOG_CHARS
     assert FIXTURE["probe"]["code"] == XCMD_PROBE
+    assert FIXTURE["slc_options"]["defaults"] == SLC_DEFAULT_OPTIONS
 
 
 def expand(text: str) -> str:
@@ -66,6 +70,13 @@ def test_xcmd_setting_matches_the_shared_fixture(case: dict[str, Any]) -> None:
 
     assert setting == case["expected"]
     assert (setting == "NOXCMD") is case["allowed"]
+
+
+@pytest.mark.parametrize("case", SLC_OPTION_CASES, ids=lambda case: case["name"])
+def test_slc_options_match_the_shared_fixture(case: dict[str, Any]) -> None:
+    options = slc_options(case["given"])
+
+    assert list(options.items()) == list(case["expected"].items())
 
 
 # ---- the tool --------------------------------------------------------------

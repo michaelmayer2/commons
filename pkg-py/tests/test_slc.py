@@ -141,7 +141,7 @@ def test_an_slc_session_does_not_start_until_it_is_used() -> None:
     session = slc_session({"ENCODING": "UTF-8"})
 
     assert repr(session) == "<SlcSession (not started)>"
-    assert session.sys_options == {"ENCODING": "UTF-8"}
+    assert session.sys_options == {"XCMD": "NO", "ENCODING": "UTF-8"}
 
 
 def test_a_sas_measure_runs_on_slc(fake_slcpy: list[StandInSlc]) -> None:
@@ -152,7 +152,10 @@ def test_a_sas_measure_runs_on_slc(fake_slcpy: list[StandInSlc]) -> None:
 
     assert frame["n"].tolist() == [9]
     (slc,) = fake_slcpy
-    assert [(o.name, o.value) for o in slc.options] == [("ENCODING", "UTF-8")]
+    assert [(o.name, o.value) for o in slc.options] == [
+        ("XCMD", "NO"),
+        ("ENCODING", "UTF-8"),
+    ]
     assert slc.submitted[0].startswith("data _null_;\n  call symputx('sex', 'F', 'G');")
 
 
@@ -218,6 +221,20 @@ def test_a_sas_measure_runs_on_a_live_slc_process() -> None:
     frame = sas_measure(spec, session).func(sex="F")
 
     assert len(frame) == 2
+
+
+@pytest.mark.skipif(
+    not os.environ.get("WPSHOME") and not os.path.isdir("/opt/altair/slc/2026"),
+    reason="Altair SLC is not installed",
+)
+def test_a_live_slc_process_runs_agent_code() -> None:
+    pytest.importorskip("slc")
+    tool = run_sas_tool(slc_session(), HandleStore())
+
+    result = tool.func(code="data work.one; x = 1; run; proc print data=work.one; run;")
+
+    assert isinstance(result, ContentToolResult)
+    assert result.value.startswith("Output:")
 
 
 @pytest.mark.skipif(
